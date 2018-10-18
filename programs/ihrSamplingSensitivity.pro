@@ -470,7 +470,6 @@ annual_noaa = takeAnnualMean(bin_mid, bin_noaa)
 
 annual_ogi = takeAnnualMean(bin_mid, bin_ogi)
 
-temp = debugger(bin_ogi)
 ; y = bin_uci[1, sort(bin_uci[1, *])]
 ; print, y[uniq(y)]
 
@@ -618,9 +617,26 @@ for q = 0, n_elements(bin_mid)-1 do begin
 endfor 
 
 annual_ogi = Rotate(out, 1)
-;print, annual_ogi
 
 
+;read the exported data from time_series_ihr_global.pro 
+infile_noaa = '/home/excluded-from-backup/ethane/IDL/temp_file/time_series_ihr_global-annual_noaa.dat'
+infile_uci = '/home/excluded-from-backup/ethane/IDL/temp_file/time_series_ihr_global-annual_uci.dat'
+infile_ogi = '/home/excluded-from-backup/ethane/IDL/temp_file/time_series_ihr_global-annual_ogi.dat'
+
+fullAnnual_NOAA = fltarr(4, file_lines(infile_noaa))
+fullAnnual_UCI = fltarr(4, file_lines(infile_uci))
+fullAnnual_OGI = fltarr(4, file_lines(infile_ogi))
+
+openr, lun1, infile_noaa, /get_lun
+openr, lun2, infile_uci, /get_lun
+openr, lun3, infile_ogi, /get_lun
+
+readf, lun1, fullAnnual_NOAA
+readf, lun2, fullAnnual_UCI
+readf, lun3, fullAnnual_OGI
+
+free_lun, lun1, lun2, lun3
 
 ;break the annual array into 2 smaller arrays contains the northern hemisphere data 
 ;and southern hemisphere data
@@ -631,8 +647,15 @@ nor_noaa = getNorth(annual_noaa)
 sou_ogi = getSouth(annual_ogi)
 nor_ogi = getNorth(annual_ogi) 
 
-;calculate the northern hemispheric mean with weights and everything
+;do the same thing for the full data
+sou_uci_f = getSouth(fullAnnual_UCI)
+nor_uci_f = getNorth(fullAnnual_UCI)
+sou_noaa_f = getSouth(fullAnnual_NOAA)
+nor_noaa_f = getNorth(fullAnnual_NOAA)
+sou_ogi_f = getSouth(fullAnnual_OGI)
+nor_ogi_f = getNorth(fullAnnual_OGI) 
 
+;calculate the northern hemispheric mean with weights and everything
 annual_sou_noaa = weightedMean(bin_mid, bin_bound, sou_noaa)
 annual_nor_noaa = weightedMean(bin_mid, bin_bound, nor_noaa)
 
@@ -646,11 +669,40 @@ annual_ihr_noaa = annual_nor_noaa[1, *]/annual_sou_noaa[1, *]
 annual_ihr_uci = annual_nor_uci[1, *]/annual_sou_uci[1, *]
 annual_ihr_ogi = annual_nor_ogi[1, *]/annual_sou_ogi[1, *]
 
-annual_ihr_noaa_err = sqrt((annual_nor_noaa[2, *]/annual_sou_noaa[1, *])^2 + (annual_nor_noaa[1, *]*annual_sou_noaa[2, *]/annual_sou_noaa[1, *]^2)^2)
+;do the same thing for the full data
+annual_sou_noaa_f = weightedMean(bin_mid, bin_bound, sou_noaa_f)
+annual_nor_noaa_f = weightedMean(bin_mid, bin_bound, nor_noaa_f)
 
-annual_ihr_uci_err = sqrt((annual_nor_uci[2, *]/annual_sou_uci[1, *])^2 + (annual_nor_uci[1, *]*annual_sou_uci[2, *]/annual_sou_uci[1, *]^2)^2)
+annual_sou_uci_f = weightedMean(bin_mid, bin_bound, sou_uci_f)
+annual_nor_uci_f = weightedMean(bin_mid, bin_bound, nor_uci_f)
 
-annual_ihr_ogi_err = sqrt((annual_nor_ogi[2, *]/annual_sou_ogi[1, *])^2 + (annual_nor_ogi[1, *]*annual_sou_ogi[2, *]/annual_sou_ogi[1, *]^2)^2)
+annual_sou_ogi_f = weightedMean(bin_mid, bin_bound, sou_ogi_f)
+annual_nor_ogi_f = weightedMean(bin_mid, bin_bound, nor_ogi_f)
+
+annual_ihr_noaa_f = annual_nor_noaa_f[1, *]/annual_sou_noaa_f[1, *]
+annual_ihr_uci_f = annual_nor_uci_f[1, *]/annual_sou_uci_f[1, *]
+annual_ihr_ogi_f = annual_nor_ogi_f[1, *]/annual_sou_ogi_f[1, *]
+
+;calculating the uncertainty for the IHR
+annual_ihr_noaa_err = sqrt((annual_nor_noaa[2, *]/annual_sou_noaa[1, *])^2 + $
+	(annual_nor_noaa[1, *]*annual_sou_noaa[2, *]/annual_sou_noaa[1, *]^2)^2)
+
+annual_ihr_uci_err = sqrt((annual_nor_uci[2, *]/annual_sou_uci[1, *])^2 + $
+	(annual_nor_uci[1, *]*annual_sou_uci[2, *]/annual_sou_uci[1, *]^2)^2)
+
+annual_ihr_ogi_err = sqrt((annual_nor_ogi[2, *]/annual_sou_ogi[1, *])^2 + $
+	(annual_nor_ogi[1, *]*annual_sou_ogi[2, *]/annual_sou_ogi[1, *]^2)^2)
+	
+;do the same thing for the full data
+annual_ihr_noaa_err_f = sqrt((annual_nor_noaa_f[2, *]/annual_sou_noaa_f[1, *])^2 + $
+	(annual_nor_noaa_f[1, *]*annual_sou_noaa_f[2, *]/annual_sou_noaa_f[1, *]^2)^2)
+
+annual_ihr_uci_err_f = sqrt((annual_nor_uci_f[2, *]/annual_sou_uci_f[1, *])^2 + $
+	(annual_nor_uci_f[1, *]*annual_sou_uci_f[2, *]/annual_sou_uci_f[1, *]^2)^2)
+
+annual_ihr_ogi_err = sqrt((annual_nor_ogi_f[2, *]/annual_sou_ogi_f[1, *])^2 + $
+	(annual_nor_ogi_f[1, *]*annual_sou_ogi_f[2, *]/annual_sou_ogi_f[1, *]^2)^2)
+
 ;plotting procedure
 ;set up plot
 
@@ -666,13 +718,21 @@ multiplot, [1,3], ygap=0.002, xgap=0;  sets up multiplot
 ;plot northern hemisphere
 cgPlot, annual_nor_noaa[0, *], annual_nor_noaa[1, *], xrange = [1982, 2016], xticklen = 1, xgridstyle = 1, $
 	xticks = 17, /nodata, yrange = [700,1600], ytitle = 'Mixing ratio(pptv)', $
-	title = 'Time series of global Ethane where NOAA and OGI data only from Mar, Jun, Sep, Dec'
+	title = 'Time series of global Ethane NOAA, OGI sampled in Mar, Jun, Sep, Dec compared with full data'
 cgPlot, annual_nor_noaa[0, *], annual_nor_noaa[1, *], /overplot, psym = 5, color = 'steelblue', $
 	err_yhigh = annual_nor_noaa[2, *], err_ylow = annual_nor_noaa[2, *]
 cgPlot, annual_nor_uci[0, *], annual_nor_uci[1, *], /overplot, psym = 2, color = 'forest green', $
 	err_yhigh = annual_nor_uci[2, *], err_ylow = annual_nor_uci[2, *]
 cgPlot, annual_nor_ogi[0, *], annual_nor_ogi[1, *], /overplot, psym = 4, color = 'red', $
 	err_yhigh = annual_nor_ogi[2, *], err_ylow = annual_nor_ogi[2, *]
+	
+;plot the full data
+cgPlot, annual_nor_noaa_f[0, *], annual_nor_noaa_f[1, *], /overplot, psym = 5, color = 'blue violet', $
+	err_yhigh = annual_nor_noaa_f[2, *], err_ylow = annual_nor_noaa_f[2, *]
+cgPlot, annual_nor_uci_f[0, *], annual_nor_uci_f[1, *], /overplot, psym = 2, color = 'forest green', $
+	err_yhigh = annual_nor_uci_f[2, *], err_ylow = annual_nor_uci_f[2, *]
+cgPlot, annual_nor_ogi_f[0, *], annual_nor_ogi_f[1, *], /overplot, psym = 4, color = 'violet', $
+	err_yhigh = annual_nor_ogi_f[2, *], err_ylow = annual_nor_ogi_f[2, *]
 	
 multiplot, /doyaxis, /doxaxis
 
@@ -686,6 +746,14 @@ cgPlot, annual_sou_uci[0, *], annual_sou_uci[1, *], /overplot, psym = 2, color =
 	err_yhigh = annual_sou_uci[2, *], err_ylow = annual_sou_uci[2, *]
 cgPlot, annual_sou_ogi[0, *], annual_sou_ogi[1, *], /overplot, psym = 4, color = 'red', $
 	err_yhigh = annual_sou_ogi[2, *], err_ylow = annual_sou_ogi[2, *]
+	
+;plot the full data
+cgPlot, annual_sou_noaa_f[0, *], annual_sou_noaa_f[1, *], /overplot, psym = 5, color = 'blue violet', $
+	err_yhigh = annual_sou_noaa_f[2, *], err_ylow = annual_sou_noaa_f[2, *]
+cgPlot, annual_sou_uci_f[0, *], annual_sou_uci_f[1, *], /overplot, psym = 2, color = 'forest green', $
+	err_yhigh = annual_sou_uci_f[2, *], err_ylow = annual_sou_uci_f[2, *]
+cgPlot, annual_sou_ogi_f[0, *], annual_sou_ogi_f[1, *], /overplot, psym = 4, color = 'violet', $
+	err_yhigh = annual_sou_ogi_f[2, *], err_ylow = annual_sou_ogi_f[2, *]
 
 multiplot, /doyaxis, /doxaxis
 
@@ -701,12 +769,23 @@ cgPlot, annual_sou_uci[0, *], annual_ihr_uci, /overplot, psym = 2, color = 'fore
 cgPlot, annual_sou_ogi[0, *], annual_ihr_ogi, /overplot, psym = 4, color = 'red', $
 	err_yhigh = annual_ihr_ogi_err, err_ylow = annual_ihr_ogi_err
 
+;plot the full data
+cgPlot, annual_nor_noaa_f[0, *], annual_ihr_noaa_f, /overplot, psym = 5, color = 'blue violet', $
+	err_yhigh = annual_ihr_noaa_err_f, err_ylow = annual_ihr_noaa_err_f
+cgPlot, annual_sou_uci_f[0, *], annual_ihr_uci_f, /overplot, psym = 2, color = 'forest green', $
+	err_yhigh = annual_ihr_uci_err_f, err_ylow =annual_ihr_uci_err_f
+cgPlot, annual_sou_ogi_f[0, *], annual_ihr_ogi_f, /overplot, psym = 4, color = 'violet', $
+	err_yhigh = annual_ihr_ogi_err_f, err_ylow = annual_ihr_ogi_err_f
+
+
 AL_Legend, ['OGI', 'UCI', 'NOAA'], psym = [4, 2, 5], linestyle = [0, 0, 0], box = 1, $
-	position = [1988, 2], color = ['red', 'forest green', 'steelblue'], $
+	position = [1988, 2.7], color = ['red', 'forest green', 'steelblue'], $
 	background_color = 'rose'
 close_device
 
 spawn, 'gv temp.eps'
 
 multiplot, /default
+
+
 end
