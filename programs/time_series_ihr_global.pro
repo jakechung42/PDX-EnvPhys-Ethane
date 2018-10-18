@@ -600,9 +600,27 @@ for q = 0, n_elements(bin_mid)-1 do begin
 endfor 
 
 annual_ogi = Rotate(out, 1)
-;print, annual_ogi
 
 
+;the following section exports the data out to an ASCII file so the data
+;can be read by a different program to compare the NOAA and UCI data when 
+;only Mar, Jun, Sep, Dec months are used
+
+;create directory for the export files
+infile_noaa = '/home/excluded-from-backup/ethane/IDL/temp_file/time_series_ihr_global-annual_noaa.dat'
+infile_uci = '/home/excluded-from-backup/ethane/IDL/temp_file/time_series_ihr_global-annual_uci.dat'
+infile_ogi = '/home/excluded-from-backup/ethane/IDL/temp_file/time_series_ihr_global-annual_ogi.dat'
+
+openw, lun1, infile_noaa, /get_lun
+printf, lun1, annual_noaa
+
+openw, lun2, infile_uci, /get_lun
+printf, lun2, annual_uci
+
+openw, lun3, infile_ogi, /get_lun
+printf, lun3, annual_ogi
+
+free_lun, lun1, lun2, lun3
 
 ;break the annual array into 2 smaller arrays contains the northern hemisphere data 
 ;and southern hemisphere data
