@@ -760,7 +760,7 @@ multiplot, /doyaxis, /doxaxis
 	
 ;plot IHR
 cgPlot, annual_nor_noaa[1, *], annual_ihr_noaa, /nodata, xtitle = 'Years', ytitle = 'IHR', $
-	xrange = [1982, 2016], yrange = [0, 7], $
+	xrange = [1982, 2016], yrange = [0, 8], $
 	xticklen = 1, xgridstyle = 1, xticks = 17
 cgPlot, annual_nor_noaa[0, *], annual_ihr_noaa, /overplot, psym = 5, color = 'steelblue', $
 	err_yhigh = annual_ihr_noaa_err, err_ylow = annual_ihr_noaa_err
@@ -778,9 +778,10 @@ cgPlot, annual_sou_ogi_f[0, *], annual_ihr_ogi_f, /overplot, psym = 4, color = '
 	err_yhigh = annual_ihr_ogi_err_f, err_ylow = annual_ihr_ogi_err_f
 
 
-AL_Legend, ['OGI', 'UCI', 'NOAA'], psym = [4, 2, 5], linestyle = [0, 0, 0], box = 1, $
-	position = [1988, 2.7], color = ['red', 'forest green', 'steelblue'], $
-	background_color = 'rose'
+AL_Legend, ['OGI 4-month', 'OGI 12-month', 'UCI', 'NOAA 4-month', 'NOAA 12-month'], $
+	psym = [4, 4, 2, 5, 5], linestyle = [0, 0, 0, 0, 0], box = 1, $
+	color = ['red', 'violet', 'forest green', 'steelblue', 'blue violet'], $
+	background_color = 'rose', position = [1988, 9]
 close_device
 
 spawn, 'gv temp.eps'
