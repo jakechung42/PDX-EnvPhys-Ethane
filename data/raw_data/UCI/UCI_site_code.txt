@@ -1,0 +1,60 @@
+Barrow Weather Station (NOAA), Alaska	->	BWS
+Freshwater lake, Barrow AK (ice road)	->	FWL
+NW of Barrow on Coast					->	NWB
+Fairbanks, AK							->	FBA
+Washington Creek, Fairbanks				->	WCF
+Portage Glacier, Anchorage AK			->	PGA
+Monashka Bay, Kodiak					->	MBK
+Fort Abercrombie State Park, Kodiak		->	FASP
+Ocean Shores, WA						->	OSWA
+Ecola Beach State Park (OR)				->	EBOR
+Cape Lookout State Park, Or				->	CLOR
+Yaquina Head Lighthouse Newport, OR		->	YHLW
+Cape Blanco Lighthouse (OR)				->	CBOR
+MacKerricher State Park (Fort Bragg, CA)	->	FBCA
+Point Arena, CA								->	PACA
+Point Reyes Lighthouse (CA)					->	PRCA
+Julia Pfieffer State Beach, CA				->	JPCA
+Banzai Cliff, Saipan					->	BZCS
+90 mile beach (1st access), New Zealand North Island		->	NZNI
+90 mile beach (2nd access), New Zealand North Island		->	NZNI
+Cabo San Lucas							->	CSL
+Cape Reinga, New Zealand North Island	->	CRNZ
+Funafuti, Tuvalu						->	FFT
+Gillespies Beach, New Zealand South Island 					->	GBNZ
+Guam Ipan Beach							->	MISSING LONGITUDE VALUES
+Haast Beach, New Zealand South Island 	->	HaBNZ
+Hokitika Beach, New Zealand South Island 					->	HoBNZ
+Kauai, HI								->	KAHI
+Kodiak									->	KODIAK
+Kosrae									->	KOSRAE
+La Pinta Hotel Beach, south of san Quentin					->	LaPinta
+Majuro, Marshall Islands				->	MaMI
+Muriwai Beach, New Zealand North Island	->	MuBNZ
+Norfolk Island							->	NOI
+Oreti Beach, New Zealand South Island	->	OBNZ
+Ponhpei, Micronesia						->	PoMi
+Punta Baja								->	PTBJ
+Rarotonga, Cook Islands					->	RCI
+Tarawa									->	TARAWA		
+Todos Santos							->	ToSa
+Tula Village, American Samoa			->	TVAS
+Upolu Airport, Big Isle, Hawaii			->	UABI	
+Yap										-> 	YAP
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
