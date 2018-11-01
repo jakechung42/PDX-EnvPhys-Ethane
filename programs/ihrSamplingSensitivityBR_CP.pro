@@ -139,10 +139,33 @@ endfor
 return, out
 
 end
+
+FUNCTION reqNetwork, inputArr, n
+;just a quick function for moving the NOAA, UCI and OGI data out
+;from the input array
+;input n is either 1 for NOAA, 2 for UCI or 3 for OGI
+
+;fetch the index for the network corresponding to n
+x = where(inputArr[0, *] eq n)
+;fetch the data using the fetched index
+out = inputArr[1 : 3, x]
+;return the output 
+return, out
+
+end
+
+
+FUNCTION neg999toNAN, array
+
+;convert -999 values to NAN values
+neg999 = where(array eq -999, count)
+if (count gt 0) then begin
+	array[neg999] = !VALUES.F_NAN
+endif
+
+return, array
+end
 	
-
-
-
 PRO ihrSamplingSensitivityBR_CP
 
 ;this program looks at the sensitivity of the IHR of Barrow and Cape Grim when 
@@ -454,6 +477,58 @@ for i = 0, n_elements(ogiYear)-1 do begin
 	endelse
 endfor 
 
+;read the exported data the Barrow and Cape Grim IHR plot to plot with the sensitivity plot
+;specigy the directory
+infile1 = '/home/excluded-from-backup/ethane/IDL/temp_file/time_series_ihr_BR_CP.dat'
+;create an array to store the data
+inputIHR = fltarr(4, file_lines(infile1))
+;open to read
+openr, lun1, infile1, /get_lun
+;read the entire file, and put it in inputIHR variable
+readf, lun1, inputIHR
+;release the logical parser 
+free_lun, lun1
+
+;read the annual average of Barrow and Cape Grim
+;specify directorey
+infile = '/home/excluded-from-backup/ethane/IDL/temp_file/annual_mean_barrow_NoHeaders.dat'
+;create an array to store the data
+inputBR = fltarr(4, file_lines(infile))
+;open to read
+openr, lun, infile, /get_lun
+;read the fine and store the data in inputBR
+readf, lun, inputBR
+;release
+free_lun, lun
+
+;read the annual average of Cape Grim
+infile = '/home/excluded-from-backup/ethane/IDL/temp_file/annual_mean_capegrim_NoHeaders.dat'
+;create an array to store the data
+inputCG = fltarr(4, file_lines(infile))
+;open to read
+openr, lun, infile, /get_lun
+;read the fine and store the data in inputCG
+readf, lun, inputCG
+;release
+free_lun, lun
+
+;convert negative 999 in the inputBR and inputCG data to NaN
+inputBR = neg999toNAN(inputBR)
+inputCG = neg999toNAN(inputCG)
+
+;seperate the NOAA, UCI and OGI data out from each input array
+fullNoaaIHR = reqNetwork(inputIHR, 1)
+fullUciIHR = reqNetwork(inputIHR, 2)
+fullOgiIHR = reqNetwork(inputIHR, 3)
+
+fullNoaaBR = reqNetwork(inputBR, 1)
+fullUciBR = reqNetwork(inputBR, 2)
+fullOgiBR = reqNetwork(inputBR, 3)
+
+fullNoaaCG = reqNetwork(inputCG, 1)
+fullUciCG = reqNetwork(inputCG, 2)
+fullOgiCG = reqNetwork(inputCG, 3)
+
 ;plotting procedure
 ;set up plot
 open_device, /ps, /color, file='temp.eps', margin=0.05, xsize = 10.0, ysize = 7.5
@@ -474,6 +549,14 @@ cgPlot, uciBR_year, uciBR_mean[0, *], /overplot, err_yhigh = uciBR_mean[1, *], e
 	psym = 2, color = 'forest green'
 cgPlot, ogiBR_year, ogiBR_mean[0, *], /overplot, err_yhigh = ogiBR_mean[1, *], err_ylow = ogiBR_mean[1, *], $
 	psym = 4, color = 'red'
+	
+;plot full-sampled barrow
+cgPlot, fullNoaaBR[0, *], fullNoaaBR[1, *], /overplot, err_yhigh = fullNoaaBR[2, *], err_ylow = fullNoaaBR[2, *], $
+	psym = 5, color = 'blue violet'
+cgPlot, fullUciBR[0, *], fullUciBR[1, *], /overplot, err_yhigh = fullUciBR[2, *], err_ylow = fullUciBR[2, *], $
+	psym = 2, color = 'forest green'
+cgPlot, fullOgiBR[0, *], fullOgiBR[1, *], /overplot, err_yhigh = fullOgiBR[2, *], err_ylow = fullOgiBR[2, *], $
+	psym = 4, color = 'violet'
 multiplot, /doyaxis, /doxaxis
 
 ;plot Cape Grim
@@ -485,11 +568,19 @@ cgPlot, uciCG_year, uciCG_mean[0, *], /overplot, err_yhigh = uciCG_mean[1, *], e
 	psym = 2, color = 'forest green'
 cgPlot, ogiCG_year, ogiCG_mean[0, *], /overplot, err_yhigh = ogiCG_mean[1, *], err_ylow = ogiCG_mean[1, *], $
 	psym = 4, color = 'red'
+	
+;plot full-sampled Cape Grim
+cgPlot, fullNoaaCG[0, *], fullNoaaCG[1, *], /overplot, err_yhigh = fullNoaaCG[2, *], err_ylow = fullNoaaCG[2, *], $
+	psym = 5, color = 'blue violet'
+cgPlot, fullUciCG[0, *], fullUciCG[1, *], /overplot, err_yhigh = fullUciCG[2, *], err_ylow = fullUciCG[2, *], $
+	psym = 2, color = 'forest green'
+cgPlot, fullOgiCG[0, *], fullOgiCG[1, *], /overplot, err_yhigh = fullOgiCG[2, *], err_ylow = fullOgiCG[2, *], $
+	psym = 4, color = 'violet'
 multiplot, /doyaxis, /doxaxis
 
-	
+;plot IHR
 cgPlot, noaaYear, /nodata, xtitle = 'Years', ytitle = 'IHR', $
-	xrange = [1982, 2016], yrange = [4, 10], $
+	xrange = [1982, 2016], yrange = [4, 11], $
 	xticklen = 1, xgridstyle = 1, xticks = 17
 cgPlot, noaaYear, noaaIHR, /overplot, psym = 5, color = 'steelblue', err_yhigh = noaaIHR_err, $
 	err_ylow = noaaIHR_err
@@ -498,8 +589,18 @@ cgPlot, uciYear, uciIHR, /overplot, psym = 2, color = 'forest green', err_yhigh 
 cgPlot, ogiYear, ogiIHR, /overplot, psym = 4, color = 'red', err_ylow = ogiIHR_err, $
 	err_yhigh = ogiIHR_err
 
-AL_Legend, ['OGI', 'UCI', 'NOAA'], psym = [4, 2, 5], linestyle = [0, 0, 0], box = 1, $
-	position = [1988, 8.7], color = ['red', 'forest green', 'steelblue'], $
+;plot full-sampled IHR
+cgPlot, fullNoaaIHR[0, *], fullNoaaIHR[1, *], /overplot, psym = 5, color = 'blue violet', err_yhigh = fullNoaaIHR[2, *], $
+	err_ylow = fullNoaaIHR[2, *]
+cgPlot, fullUciIHR[0, *], fullUciIHR[1, *], /overplot, psym = 2, color = 'forest green', err_yhigh = fullUciIHR[2, *], $
+	err_ylow = fullUciIHR[2, *]
+cgPlot, fullOgiIHR[0, *], fullOgiIHR[1, *], /overplot, psym = 4, color = 'violet', err_ylow = fullOgiIHR[2, *], $
+	err_yhigh = fullOgiIHR[2, *]
+
+
+AL_Legend, ['4-month OGI', '4-month UCI', '4-month NOAA', 'full OGI', 'full NOAA'], $
+	psym = [4, 2, 5, 4, 5], linestyle = [0, 0, 0, 0, 0], box = 1, $
+	position = [1991, 10.5], color = ['red', 'forest green', 'steelblue', 'violet', 'blue violet'], $
 	background_color = 'rose'
 close_device
 
