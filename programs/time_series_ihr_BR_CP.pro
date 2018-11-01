@@ -107,18 +107,7 @@ cg_uci = { year: (file_arr[1, uci_idx]), $
 cg_ogi = { year: (file_arr[1, ogi_idx]), $
 			avg: (file_arr[2, ogi_idx]), $
 			err: (file_arr[3, ogi_idx]) }
-; print, 'cg_noaa: '
-; print, cg_noaa.year
-; print, 'cg noaa avg: '
-; print, cg_noaa.avg
-; print, 'br_noaa: '
-; print, br_noaa.year
-; print, 'br noaa avg: '
-; print, br_noaa.avg
-; print, 'cg uci year: '
-; print, cg_uci.year
-; print, 'br uci year: '
-; print, br_uci.year
+			
 print, 'Make sure the years of Barrow UCI match the years of Cape Grim band UCI, or else the IHR is nor reliable'
 if (n_elements(br_uci.year) ne n_elements(cg_uci.year)) then $
 	print, 'Error!!! The size of the Barrow and Cape Grim UCI does not match, IHR is not reliable'
@@ -139,12 +128,30 @@ for i = 0, n_elements(br_noaa.year)-1 do begin
 	if (count gt 0) then begin
 		ihr_noaa[i] = br_noaa.avg[i] / cg_noaa.avg[x]
 		ihr_noaa_err[i] = sqrt( (br_noaa.err[i]/cg_noaa.avg[x])^2 + (br_noaa.avg[i]*cg_noaa.err[x]/cg_noaa.avg[x]^2)^2 )
-	endif else ihr_noaa[i] = !VALUES.F_NAN
+	endif else begin
+		ihr_noaa[i] = !VALUES.F_NAN
+		ihr_noaa_err[i] = !VALUES.F_NAN
+	endelse
 endfor
 
+;write the ihr and ihr error array out to a file to plot along with the Barrow Cape Grim 
+;sampling sensitivity study
+infile = '/home/excluded-from-backup/ethane/IDL/temp_file/time_series_ihr_BR_CP.dat'
+openw, lun, infile, /get_lun
 
+for i = 0, n_elements(br_noaa.year)-1 do begin
+	printf, lun, '1', br_noaa.year[i], ihr_noaa[i], ihr_noaa_err[i]
+endfor
  
+for i = 0, n_elements(br_uci.year)-1 do begin
+	printf, lun, '2', br_uci.year[i], ihr_uci[i], ihr_uci_err[i]
+endfor
 
+for i = 0, n_elements(br_ogi.year)-1 do begin
+	printf, lun, '3', br_ogi.year[i], ihr_ogi[i], ihr_ogi_err[i]
+endfor
+
+free_lun, lun
 ;plotting procedure
 ;set up plot
 
