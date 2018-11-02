@@ -33,6 +33,7 @@ return, out
 
 end
 
+;======================================================================
 FUNCTION rmOutliers, ratio, year, month, time, deseason
 
 ;this function removes the outliers using the function std_dev_fgauss
@@ -65,7 +66,7 @@ return, out
 
 end
 
-
+;======================================================================
 FUNCTION annual_mean, ratio_vec, month_vec
 
 ;this function calculates the annual mean of the data
@@ -123,6 +124,7 @@ return, out
 
 end
 
+;======================================================================
 FUNCTION rmNaN, inputArr
 
 ;this function remove NaN values from a vector 
@@ -140,6 +142,7 @@ return, out
 
 end
 
+;======================================================================
 FUNCTION reqNetwork, inputArr, n
 ;just a quick function for moving the NOAA, UCI and OGI data out
 ;from the input array
@@ -154,7 +157,7 @@ return, out
 
 end
 
-
+;======================================================================
 FUNCTION neg999toNAN, array
 
 ;convert -999 values to NAN values
@@ -166,6 +169,7 @@ endif
 return, array
 end
 	
+;======================================================================
 PRO ihrSamplingSensitivityBR_CG
 
 ;this program looks at the sensitivity of the IHR of Barrow and Cape Grim when 
