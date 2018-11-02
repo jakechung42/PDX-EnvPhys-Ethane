@@ -166,7 +166,7 @@ endif
 return, array
 end
 	
-PRO ihrSamplingSensitivityBR_CP
+PRO ihrSamplingSensitivityBR_CG
 
 ;this program looks at the sensitivity of the IHR of Barrow and Cape Grim when 
 ;the data is calculated using the same months as UCI for NOAA and OGI (3, 6, 9, 12)
