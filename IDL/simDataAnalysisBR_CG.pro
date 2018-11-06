@@ -1,3 +1,8 @@
+;this program analyzes the simulated data from GEOS-Chem using the same 
+;algorithm as for ihrSamplingSensitivityBR_CP.pro
+
+
+
 FUNCTION annualMean, inputArr, year
 
 ;the output of GEOS-Chem is a 3 dimensional array with time, lon, lat
@@ -9,9 +14,8 @@ FUNCTION annualMean, inputArr, year
 modulo = n_elements(inputArr(*, 0, 0)) mod n_elements(year)
 if modulo ne 0 then begin
 	print, 'Do not have enough months, stop the program!!!'
-	stop		;if there's not enough months, stop the program
+	stop	;if there's not enough months, stop the program
 endif
-
 ;start calculating the annual average
 ;make an array to store the annual average 
 out = fltarr(n_elements(year), n_elements(inputArr[0, *, 0]), n_elements(inputArr[0, 0, *]))
@@ -19,23 +23,30 @@ out = fltarr(n_elements(year), n_elements(inputArr[0, *, 0]), n_elements(inputAr
 for i = 0, n_elements(year)-1 do begin
 	;take every 12 indeces out to calculate the annual mean
 	tempArr = inputArr[i * 2 : 12 * i + 11, *, *] 
-	out[i, *, *] = mean(tempArr, 1)
+	out[i, *, *] = mean(tempArr, 1)/2 * 1000 ;adjust to pptv
 endfor
-
-return, out	
+return, out ;return value
 
 end
 
+FUNCTION getTimeSeriesSite, masterArr, lat, lon
 
+;this function takes the input as the three dimensional simulated annual mean array and uses
+;the input lon and lat to return the time series of the input site
 
+;employ the ctm_index function to obtain the index of the input lon lat in the array
+CTM_INDEX, CTM_TYPE('GEOS1', RESOLUTION= 2), i, j, CENTER= [lat, lon], /non_interactive
+print, i, j
+out = masterArr[*, i, j] ;get the annual mean time series of the input coordinate.
+
+return, out
+
+end
 
 
 PRO simDataAnalysisBR_CG 
 
 compile_opt idl2
-
-;this program analyzes the simulated data from GEOS-Chem using the same 
-;algorithm as for ihrSamplingSensitivityBR_CP.pro
 
 ;sim_title = 'PSU emissions scaled to Xiao et al over 1996-2003'
 filename1 = "/home/excluded-from-backup/data/C2H6/trac_avg.PSUSF_1981_2015.bpch"
@@ -71,14 +82,19 @@ endfor
 
 ;clean up memory
 CTM_CLEANUP 
+;obtain index of the Barrow site, variable i1, j1 contain the index of Barrow
+barrow = getTimeSeriesSite(sim1, 71.31, -156.6)
+;obtain index of the Cape Grim site
+capegrim = getTimeSeriesSite(sim1, -40.66, 144.66)
 
 ;simYear contains the years that the simulation has
 simYear = sim_ymd.year[sort(sim_ymd.year)]
 simYear = simYear[uniq(simYear)]
-
-print, simYear 
-
+;sim1 is a 3D array, [year, longitudes, latitudes]
 sim1 = annualMean(tempSimArr, simYear)
+;dimenstion for sim1 is [34, 144, 91] 34 is 34 years, 144 and 91 are the index for lon and lat 
+;since the simulation is a 2x2.5 degree grid.
 
-help, sim1
+
+
 end
