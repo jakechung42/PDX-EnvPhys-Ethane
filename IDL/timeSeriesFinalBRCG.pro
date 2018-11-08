@@ -257,6 +257,18 @@ CTM_CLEANUP
 return, tempSimArr
 
 end
+
+;======================================================================
+FUNCTION rmAbsSim, input
+
+;this short function removes the absolute value to show only the trend of the simulated data
+;the input variable should be a mixing ratio vector
+avgVar = mean(input)
+out = input[*] - avgVar
+
+return, out 
+
+end
 ;>>>>>>>>>>[main program]<<<<<<<<<<
 PRO timeSeriesFinalBRCG
 
@@ -563,6 +575,28 @@ for i = 0, n_elements(ogiYear)-1 do begin
 	endelse
 endfor
 
+;since we don't care much about the absolute value of ethane ratio but more about the trend, the following section
+;takes the average of the data and subtract it from each data point to compare the trend of the observed
+;and simulated data.
+allBR = [rotate(noaaBR_mean[0, *], 3), rotate(uciBR_mean[0, *], 3), rotate(ogiBR_mean[0, *], 3)]
+allCG = [rotate(noaaCG_mean[0, *], 3), rotate(uciCG_mean[0, *], 3), rotate(ogiCG_mean[0, *], 3)]
+all_IHR = [noaaIHR, uciIHR, ogiIHR]
+;get the average for all data 
+allBR_mean = mean(allBR, /nan)
+allCG_mean = mean(allCG, /nan)
+all_IHR_mean = mean(all_IHR, /nan)
+;remove absolute value and just show the trend
+noaaBR_mean[0, *] = noaaBR_mean[0, *] - allBR_mean
+uciBR_mean[0, *] = uciBR_mean[0, *] - allBR_mean
+ogiBR_mean[0, *] = ogiBR_mean[0, *] - allBR_mean
+noaaCG_mean[0, *] = noaaCG_mean[0, *] - allCG_mean
+uciCG_mean[0, *] = uciCG_mean[0, *] - allCG_mean
+ogiCG_mean[0, *] = ogiCG_mean[0, *] - allCG_mean
+;same process for IHR values
+noaaIHR = noaaIHR - all_IHR_mean
+uciIHR = uciIHR - all_IHR_mean
+ogiIHR = ogiIHR - all_IHR_mean
+print, noaaBR_mean
 ;>>>>>>>>>>>[Process Simulated data]<<<<<<<<<<
 ;sim_title = 'PSU emissions scaled to Xiao et al over 1996-2003' Sce E
 filename1 = "/home/excluded-from-backup/data/C2H6/trac_avg.PSUSF_1981_2015.bpch"
@@ -625,6 +659,27 @@ sim3ihr = barrow3/capegrim3
 sim4ihr = barrow4/capegrim4
 sim5ihr = barrow5/capegrim5
 sim6ihr = barrow6/capegrim6
+;remove absolute values and just show the trend
+barrow1 = rmAbsSim(barrow1)
+barrow2 = rmAbsSim(barrow2)
+barrow3 = rmAbsSim(barrow3)
+barrow4 = rmAbsSim(barrow4)
+barrow5 = rmAbsSim(barrow5)
+barrow6 = rmAbsSim(barrow6)
+;same for cape grim
+capegrim1 = rmAbsSim(capegrim1)
+capegrim2 = rmAbsSim(capegrim2)
+capegrim3 = rmAbsSim(capegrim3)
+capegrim4 = rmAbsSim(capegrim4)
+capegrim5 = rmAbsSim(capegrim5)
+capegrim6 = rmAbsSim(capegrim6)
+;same for ihr
+sim1ihr = rmAbsSim(sim1ihr)
+sim2ihr = rmAbsSim(sim2ihr)
+sim3ihr = rmAbsSim(sim3ihr)
+sim4ihr = rmAbsSim(sim4ihr)
+sim5ihr = rmAbsSim(sim5ihr)
+sim6ihr = rmAbsSim(sim6ihr)
 ;>>>>>>>>>>>[Plotting Procedure]<<<<<<<<<<
 ;set up plot
 open_device, /ps, /color, file='temp.eps', margin=0.05, xsize = 10.0, ysize = 7.5
@@ -637,7 +692,7 @@ multiplot, [1,3], ygap=0.002, xgap=0;  sets up multiplot
 
 ;plot barrow
 cgPlot, noaaBR_year, xrange = [1982, 2015], xticklen = 1, xgridstyle = 1, $
-	xticks = 17, /nodata, yrange = [1000,2400], ytitle = 'Mixing ratio(pptv)', $
+	xticks = 17, /nodata, yrange = [-300,700], ytitle = 'Mixing ratio(pptv)', $
 	title = 'Time series of Barrow and Cape Grim along with IHR (Mar, Jun, Sep, Dec). UCI pulls data from lat 38 to 46 south'
 cgPlot, noaaBR_year, noaaBR_mean[0, *], /overplot, err_yhigh = noaaBR_mean[1, *], err_ylow = noaaBR_mean[1, *], $
 	psym = 5, color = 'black'
@@ -657,7 +712,7 @@ multiplot, /doyaxis, /doxaxis
 
 ;plot Cape Grim 
 cgPlot, noaaCG_year, /nodata, xrange = [1982, 2015], xticklen = 1, xgridstyle = 1, $
-	xticks = 17, XTickformat='(A1)', yrange = [150,500], ytitle = 'Mixing ratio(pptv)'
+	xticks = 17, XTickformat='(A1)', yrange = [-100,100], ytitle = 'Mixing ratio(pptv)'
 cgPlot, noaaCG_year, noaaCG_mean[0, *], /overplot, err_yhigh = noaaCG_mean[1, *], err_ylow = noaaCG_mean[1, *], $
 	psym = 5, color = 'black'
 cgPlot, uciCG_year, uciCG_mean[0, *], /overplot, err_yhigh = uciCG_mean[1, *], err_ylow = uciCG_mean[1, *], $
@@ -676,7 +731,7 @@ multiplot, /doyaxis, /doxaxis
 
 ;plot IHR 
 cgPlot, noaaYear, /nodata, xtitle = 'Years', ytitle = 'IHR', $
-	xrange = [1982, 2015], yrange = [3, 11], $
+	xrange = [1982, 2015], yrange = [-3, 3], $
 	xticklen = 1, xgridstyle = 1, xticks = 17
 cgPlot, noaaYear, noaaIHR, /overplot, psym = 5, color = 'black', err_yhigh = noaaIHR_err, $
 	err_ylow = noaaIHR_err
@@ -695,7 +750,7 @@ cgPlot, simYear, sim6ihr, /overplot, linestyle = 0, color = 'red', thick = 1
 
 AL_Legend, ['Sce A', 'Sce B', 'Sce C', 'Sce D', 'Sce E', 'Sce F'], $
 	psym = [0, 0, 0, 0, 0, 0], linestyle = [0, 0, 2, 0, 2, 0], box = 0, $
-	position = [1991, 10.5], color = ['violet', 'forest green', 'steelblue', 'steelblue', 'red', 'red'], $
+	position = [1992, 3], color = ['violet', 'forest green', 'steelblue', 'steelblue', 'red', 'red'], $
 	charsize = 1
 close_device
 
