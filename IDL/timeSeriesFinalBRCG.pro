@@ -179,7 +179,8 @@ FUNCTION annualSimMean, inputArr, year
 
 ;the output of GEOS-Chem is a 3 dimensional array with time, lon, lat
 ;corresponding to x, y, z. The time dimension for our simulations 
-;is monthly average. We need annual average. 
+;is monthly average. We need annual average calculated from March, 
+;June, September and December.
 ;This program takes the 3D-array and calculate the annual average
 
 ;make sure that the data has 12 months for every year
@@ -189,12 +190,17 @@ if modulo ne 0 then begin
 	stop	;if there's not enough months, stop the program
 endif
 ;start calculating the annual average
+;first, need to pull out only the months Mar, Jun, Sep, Dec from the array
+;shortArr will contain the months of Mar, Jun, Sep, and Dec only
+shortArr = fltarr(n_elements(inputArr[*, 0, 0])/3, n_elements(inputArr[0, *, 0]), n_elements(inputArr[0, 0, *]))
+for n = 0, n_elements(shortArr[*, 0, 0])-1 do begin
+	shortArr[n, *, *] = inputArr[3 * n + 2, *, *]
+endfor
 ;make an array to store the annual average 
-out = fltarr(n_elements(year), n_elements(inputArr[0, *, 0]), n_elements(inputArr[0, 0, *]))
-
+out = fltarr(n_elements(year), n_elements(shortArr[0, *, 0]), n_elements(shortArr[0, 0, *]))
 for i = 0, n_elements(year)-1 do begin
-	;take every 12 indeces out to calculate the annual mean
-	tempArr = inputArr[i * 2 : 12 * i + 11, *, *] 
+	;take every 4 indeces out to calculate the annual mean
+	tempArr = shortArr[4 * i : 4 * i + 3, *, *] 
 	out[i, *, *] = mean(tempArr, 1)/2 * 1000 ;adjust to pptv
 endfor
 return, out ;return value
