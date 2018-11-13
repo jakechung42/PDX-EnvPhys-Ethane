@@ -43,8 +43,7 @@ FUNCTION getTimeSeriesSite, masterArr, lat, lon
 
 ;employ the ctm_index function to obtain the index of the input lon lat in the array
 CTM_INDEX, CTM_TYPE('GEOS1', RESOLUTION= 2), i, j, CENTER= [lat, lon], /non_interactive
-print, i, j
-out = masterArr[*, i, j] ;get the annual mean time series of the input coordinate.
+out = masterArr[*, i-1, j-1] ;get the annual mean time series of the input coordinate.
 
 return, out
 
