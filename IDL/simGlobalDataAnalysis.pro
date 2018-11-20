@@ -311,9 +311,9 @@ FUNCTION fitYear, allYear, annual_data
 ;southern hemisphere don't gaurantee to have the same years so this algorithm
 ;put the data into a year set to prevent the wrong year data being calculated.
 
-;this function get the input allYear to get all the year that a single 
+;this function uses the input allYear to get all the year that a single 
 ;data set has (noaa.year, ogi.year, uci.year), the annual data is the data of
-;one signle latitude that will be fitted with all the years that a data set has
+;one single latitude that will be fitted with all the years that a data set has
 
 temp = allYear[sort(allYear)]
 year_series = temp[uniq(temp)]
@@ -438,6 +438,54 @@ return, out
 end
 
 ;======================================================================
+FUNCTION normData, input
+
+;this short function normalizes the data to compare the trend
+avgVar = mean(input, /NAN)
+out = input[*] - avgVar
+
+return, out 
+
+end
+
+;======================================================================
+FUNCTION calSimGlobal, path, obsArr, bin_bound, bin_mid
+
+;This function calculates the simulated global averages and IHR from the input
+;parameters from only one data network.
+;description of each variable
+;path: string array contains the path to the BPCH file 
+;obsArr: structure of the observed data 
+;bin_bound: the vector that contains the latitude bin boundaries 
+;bin_mid: the middle latitude of the latitude bands
+
+;make the sim data from the obs data and the bpch file
+simArr = buildSimData(obsArr, path)
+;make the latitude bins 
+sim_bin = MakeLatBin(bin_bound, simArr.lat, simArr.month, simArr.year, simArr.ratio)
+;calculated the annual sim average
+simAnnualMean = takeSimAnnualMean(bin_mid, sim_bin)
+;allign the data temporally using the fitYeat function
+out = []
+for q = 0, n_elements(bin_mid)-1 do begin
+	x = where(simAnnualMean[0, *] eq bin_mid[q])
+	temp_array = simAnnualMean[*, x]
+	temp_out = fitYear(simArr.year, temp_array)
+	temp_out = Rotate(temp_out, 3)
+	out = [out, temp_out]
+endfor 
+simAnnualMean = Rotate(out, 1)
+
+;separate the northern and southern hemispheres
+souSim = getSouth(simAnnualMean)
+norSim = getSouth(simAnnualMean)
+;calculate hemispheric mean 
+souAnnualMean = weightedMean(bin_mid, bin_bound, souSim)
+norAnnualMean = weightedMean(bin_mid, bin_bound, norSim)
+;calculate IHR 
+annual_IHR = norAnnualMean[1, *]/souAnnualMean[1, *]
+;combine everything into a structure to output from the function
+;======================================================================
 ;start main program
 PRO simGlobalDataAnalysis 
 
@@ -511,7 +559,6 @@ bin_ogi = rmOutliers(bin_mid, ogi_deseason, bin_ogi)
 annual_noaa = takeAnnualMean(bin_mid, bin_noaa)
 annual_ogi = takeAnnualMean(bin_mid, bin_ogi)
 annual_uci = takeAnnualMean(bin_mid, bin_uci)
-
 ;the three most important arrays are annual_uci, annual_noaa, annual_ogi
 ;these three arrays contain the annual mean of each latitude band of each data set
 
@@ -538,7 +585,6 @@ for q = 0, n_elements(bin_mid)-1 do begin
 endfor 
 
 annual_noaa = Rotate(out, 1)
-;print, annual_noaa
 
 ;UCI array
 out = []
@@ -588,29 +634,80 @@ annual_ihr_ogi = annual_nor_ogi[1, *]/annual_sou_ogi[1, *]
 ;calculating the uncertainty for the IHR
 annual_ihr_noaa_err = sqrt((annual_nor_noaa[2, *]/annual_sou_noaa[1, *])^2 + $
 	(annual_nor_noaa[1, *]*annual_sou_noaa[2, *]/annual_sou_noaa[1, *]^2)^2)
-
 annual_ihr_uci_err = sqrt((annual_nor_uci[2, *]/annual_sou_uci[1, *])^2 + $
 	(annual_nor_uci[1, *]*annual_sou_uci[2, *]/annual_sou_uci[1, *]^2)^2)
-
 annual_ihr_ogi_err = sqrt((annual_nor_ogi[2, *]/annual_sou_ogi[1, *])^2 + $
 	(annual_nor_ogi[1, *]*annual_sou_ogi[2, *]/annual_sou_ogi[1, *]^2)^2)
 	
-
 ;getting the simulated data 
 path = "/home/excluded-from-backup/data/C2H6/trac_avg.PSUSF_1981_2015.bpch"
 simNoaa = buildSimData(noaa, path)
 simUci = buildSimData(uci, path)
 simOgi = buildSimData(ogi, path)
-
+;create latitude bins from the simulated data using the same bin bound as the obs data
+;change from struct to matrix array
 simNoaa_bin = MakeLatBin(bin_bound, simNoaa.lat, simNoaa.month, simNoaa.year, simNoaa.ratio)
 simUci_bin = MakeLatBin(bin_bound, simUci.lat, simUci.month, simUci.year, simUci.ratio)
 simOgi_bin = MakeLatBin(bin_bound, simOgi.lat, simOgi.month, simOgi.year, simOgi.ratio)
-;change from struct to matrix array
+;calculate the annual simulated average 
 simNoaaAnnualMean = takeSimAnnualMean(bin_mid, simNoaa_bin)
 simUciAnnualMean = takeSimAnnualMean(bin_mid, simUci_bin)
 simOgiAnnualMean = takeSimAnnualMean(bin_mid, simOgi_bin)
-print, simUciAnnualMean
-stop
+;allign the simulated data using the fitYear function
+;NOAA array
+out = []
+for q = 0, n_elements(bin_mid)-1 do begin
+	x = where(simNoaaAnnualMean[0, *] eq bin_mid[q])
+	temp_array = simNoaaAnnualMean[*, x]
+	temp_out = fitYear(simNoaa.year, temp_array)
+	temp_out = Rotate(temp_out, 3)
+	out = [out, temp_out]
+endfor 
+simNoaaAnnualMean = Rotate(out, 1)
+;UCI array
+out = []
+for q = 0, n_elements(bin_mid)-1 do begin
+	x = where(simUciAnnualMean[0, *] eq bin_mid[q])
+	temp_array = simUciAnnualMean[*, x]
+	temp_out = fitYear(simUci.year, temp_array)
+	temp_out = Rotate(temp_out, 3)
+	out = [out, temp_out]
+endfor 
+simUciAnnualMean = Rotate(out, 1)
+;OGI array
+out = []
+for q = 0, n_elements(bin_mid)-1 do begin
+	x = where(simOgiAnnualMean[0, *] eq bin_mid[q])
+	temp_array = simOgiAnnualMean[*, x]
+	temp_out = fitYear(simOgi.year, temp_array)
+	temp_out = Rotate(temp_out, 3)
+	out = [out, temp_out]
+endfor 
+simOgiAnnualMean = Rotate(out, 1)
+;break the annual array into 2 smaller arrays contains the northern hemisphere data 
+;and southern hemisphere data
+sou_SimUci = getSouth(simUciAnnualMean)
+nor_SimUci = getNorth(simUciAnnualMean)
+sou_SimNoaa = getSouth(simNoaaAnnualMean)
+nor_SimNoaa = getNorth(simNoaaAnnualMean)
+sou_SimOgi = getSouth(simOgiAnnualMean)
+nor_SimOgi = getNorth(simOgiAnnualMean) 
+;calculate the northern hemispheric mean with weights and everything
+;UCI
+annualSimSouUci = weightedMean(bin_mid, bin_bound, sou_SimUci)
+annualSimNorUci = weightedMean(bin_mid, bin_bound, nor_SimUci)
+;NOAA
+annualSimSouNoaa = weightedMean(bin_mid, bin_bound, sou_SimNoaa)
+annualSimNorNoaa = weightedMean(bin_mid, bin_bound, nor_SimNoaa)
+;OGI
+annualSimSouOgi = weightedMean(bin_mid, bin_bound, sou_SimOgi)
+annualSimNorOgi = weightedMean(bin_mid, bin_bound, nor_SimOgi)
+;IHR for all simulated data networks
+annual_IHR_simNoaa = annualSimNorNoaa[1, *]/annualSimSouNoaa[1, *]
+annual_IHR_simUci = annualSimNorUci[1, *]/annualSimSouUci[1, *]
+annual_IHR_simOgi = annualSimNorOgi[1, *]/annualSimSouOgi[1, *]
+
+
 ;plotting procedure
 ;set up plot
 open_device, /ps, /color, file='temp.eps', margin=0.05, xsize = 10.0, ysize = 7.5
@@ -624,71 +721,79 @@ multiplot, [1,3], ygap=0.002, xgap=0;  sets up multiplot
 
 ;plot northern hemisphere
 cgPlot, annual_nor_noaa[0, *], annual_nor_noaa[1, *], xrange = [1982, 2016], xticklen = 1, xgridstyle = 1, $
-	xticks = 17, /nodata, yrange = [700,1600], ytitle = 'Mixing ratio(pptv)', $
+	xticks = 17, /nodata, yrange = [-300,300], ytitle = 'Mixing ratio(pptv)', $
 	title = 'Time series of global Ethane NOAA, OGI sampled in Mar, Jun, Sep, Dec compared with full data'
-cgPlot, annual_nor_noaa[0, *], annual_nor_noaa[1, *], /overplot, psym = 5, color = 'steelblue', $
+cgPlot, annual_nor_noaa[0, *], normData(annual_nor_noaa[1, *]), /overplot, psym = 5, color = 'steelblue', $
 	err_yhigh = annual_nor_noaa[2, *], err_ylow = annual_nor_noaa[2, *]
-cgPlot, annual_nor_uci[0, *], annual_nor_uci[1, *], /overplot, psym = 2, color = 'forest green', $
+cgPlot, annual_nor_uci[0, *], normData(annual_nor_uci[1, *]), /overplot, psym = 2, color = 'forest green', $
 	err_yhigh = annual_nor_uci[2, *], err_ylow = annual_nor_uci[2, *]
-cgPlot, annual_nor_ogi[0, *], annual_nor_ogi[1, *], /overplot, psym = 4, color = 'red', $
+cgPlot, annual_nor_ogi[0, *], normData(annual_nor_ogi[1, *]), /overplot, psym = 4, color = 'red', $
 	err_yhigh = annual_nor_ogi[2, *], err_ylow = annual_nor_ogi[2, *]
 	
-;plot the full data
-cgPlot, annual_nor_noaa_f[0, *], annual_nor_noaa_f[1, *], /overplot, psym = 5, color = 'blue violet', $
-	err_yhigh = annual_nor_noaa_f[2, *], err_ylow = annual_nor_noaa_f[2, *]
-cgPlot, annual_nor_uci_f[0, *], annual_nor_uci_f[1, *], /overplot, psym = 2, color = 'forest green', $
-	err_yhigh = annual_nor_uci_f[2, *], err_ylow = annual_nor_uci_f[2, *]
-cgPlot, annual_nor_ogi_f[0, *], annual_nor_ogi_f[1, *], /overplot, psym = 4, color = 'violet', $
-	err_yhigh = annual_nor_ogi_f[2, *], err_ylow = annual_nor_ogi_f[2, *]
+;plot the sim data
+cgPlot, annualSimNorNoaa[0, *], normData(annualSimNorNoaa[1, *]), /overplot, psym = 5, color = 'blue violet', $
+	symsize = 0.75
+cgPlot, annualSimNorNoaa[0, *], normData(annualSimNorNoaa[1, *]), /overplot, linestyle = 0, color = 'blue violet' ;add line
+cgPlot, annualSimNorUci[0, *], normData(annualSimNorUci[1, *]), /overplot, psym = 2, color = 'green', $
+	symsize = 0.75
+cgPlot, annualSimNorUci[0, *], normData(annualSimNorUci[1, *]), /overplot, linestyle = 0, color = 'green';add line
+cgPlot, annualSimNorOgi[0, *], normData(annualSimNorOgi[1, *]), /overplot, psym = 4, color = 'violet', $
+	symsize = 0.75
+cgPlot, annualSimNorOgi[0, *], normData(annualSimNorOgi[1, *]), /overplot, linestyle = 0, color = 'violet';add line
 	
 multiplot, /doyaxis, /doxaxis
 
 ;plot southern hemisphere
 cgPlot, annual_sou_noaa[0, *], annual_sou_noaa[1, *], /nodata, xrange = [1982, 2016], $
-	xticklen = 1, xgridstyle = 1, xticks = 17, XTickformat='(A1)', yrange = [100,700], $
+	xticklen = 1, xgridstyle = 1, xticks = 17, XTickformat='(A1)', yrange = [-200,300], $
 	ytitle = 'Mixing ratio(pptv)'
-cgPlot, annual_sou_noaa[0, *], annual_sou_noaa[1, *], /overplot, psym = 5, color = 'steelblue', $
+cgPlot, annual_sou_noaa[0, *], normData(annual_sou_noaa[1, *]), /overplot, psym = 5, color = 'steelblue', $
 	err_yhigh = annual_sou_noaa[2, *], err_ylow = annual_sou_noaa[2, *]
-cgPlot, annual_sou_uci[0, *], annual_sou_uci[1, *], /overplot, psym = 2, color = 'forest green', $
+cgPlot, annual_sou_uci[0, *], normData(annual_sou_uci[1, *]), /overplot, psym = 2, color = 'forest green', $
 	err_yhigh = annual_sou_uci[2, *], err_ylow = annual_sou_uci[2, *]
-cgPlot, annual_sou_ogi[0, *], annual_sou_ogi[1, *], /overplot, psym = 4, color = 'red', $
+cgPlot, annual_sou_ogi[0, *], normData(annual_sou_ogi[1, *]), /overplot, psym = 4, color = 'red', $
 	err_yhigh = annual_sou_ogi[2, *], err_ylow = annual_sou_ogi[2, *]
 	
-;plot the full data
-cgPlot, annual_sou_noaa_f[0, *], annual_sou_noaa_f[1, *], /overplot, psym = 5, color = 'blue violet', $
-	err_yhigh = annual_sou_noaa_f[2, *], err_ylow = annual_sou_noaa_f[2, *]
-cgPlot, annual_sou_uci_f[0, *], annual_sou_uci_f[1, *], /overplot, psym = 2, color = 'forest green', $
-	err_yhigh = annual_sou_uci_f[2, *], err_ylow = annual_sou_uci_f[2, *]
-cgPlot, annual_sou_ogi_f[0, *], annual_sou_ogi_f[1, *], /overplot, psym = 4, color = 'violet', $
-	err_yhigh = annual_sou_ogi_f[2, *], err_ylow = annual_sou_ogi_f[2, *]
+;plot the sim data
+cgPlot, annualSimSouNoaa[0, *], normData(annualSimSouNoaa[1, *]), /overplot, psym = 5, color = 'blue violet', $
+	symsize = 0.75
+cgPlot, annualSimSouNoaa[0, *], normData(annualSimSouNoaa[1, *]), /overplot, linestyle = 0, color = 'blue violet'
+cgPlot, annualSimSouUci[0, *], normData(annualSimSouUci[1, *]), /overplot, psym = 2, color = 'green', $
+	symsize = 0.75
+cgPlot, annualSimSouUci[0, *], normData(annualSimSouUci[1, *]), /overplot, linestyle = 0, color = 'green'
+cgPlot, annualSimSouOgi[0, *], normData(annualSimSouOgi[1, *]), /overplot, psym = 4, color = 'violet', $
+	symsize = 0.75
+cgPlot, annualSimSouOgi[0, *], normData(annualSimSouOgi[1, *]), /overplot, linestyle = 0, color = 'violet'
 
 multiplot, /doyaxis, /doxaxis
 
-	
 ;plot IHR
 cgPlot, annual_nor_noaa[1, *], annual_ihr_noaa, /nodata, xtitle = 'Years', ytitle = 'IHR', $
-	xrange = [1982, 2016], yrange = [0, 8], $
+	xrange = [1982, 2016], yrange = [-2, 2], $
 	xticklen = 1, xgridstyle = 1, xticks = 17
-cgPlot, annual_nor_noaa[0, *], annual_ihr_noaa, /overplot, psym = 5, color = 'steelblue', $
+cgPlot, annual_sou_noaa[0, *], normData(annual_ihr_noaa), /overplot, psym = 5, color = 'steelblue', $
 	err_yhigh = annual_ihr_noaa_err, err_ylow = annual_ihr_noaa_err
-cgPlot, annual_sou_uci[0, *], annual_ihr_uci, /overplot, psym = 2, color = 'forest green', $
+cgPlot, annual_sou_uci[0, *], normData(annual_ihr_uci), /overplot, psym = 2, color = 'forest green', $
 	err_yhigh = annual_ihr_uci_err, err_ylow =annual_ihr_uci_err
-cgPlot, annual_sou_ogi[0, *], annual_ihr_ogi, /overplot, psym = 4, color = 'red', $
+cgPlot, annual_sou_ogi[0, *], normData(annual_ihr_ogi), /overplot, psym = 4, color = 'red', $
 	err_yhigh = annual_ihr_ogi_err, err_ylow = annual_ihr_ogi_err
 
 ;plot the full data
-cgPlot, annual_nor_noaa_f[0, *], annual_ihr_noaa_f, /overplot, psym = 5, color = 'blue violet', $
-	err_yhigh = annual_ihr_noaa_err_f, err_ylow = annual_ihr_noaa_err_f
-cgPlot, annual_sou_uci_f[0, *], annual_ihr_uci_f, /overplot, psym = 2, color = 'forest green', $
-	err_yhigh = annual_ihr_uci_err_f, err_ylow =annual_ihr_uci_err_f
-cgPlot, annual_sou_ogi_f[0, *], annual_ihr_ogi_f, /overplot, psym = 4, color = 'violet', $
-	err_yhigh = annual_ihr_ogi_err_f, err_ylow = annual_ihr_ogi_err_f
+cgPlot, annualSimNorNoaa[0, *], normData(annual_IHR_simNoaa), /overplot, psym = 5, color = 'blue violet', $
+	symsize = 0.75
+cgPlot, annualSimNorNoaa[0, *], normData(annual_IHR_simNoaa), /overplot, linestyle = 0, color = 'blue violet'
+cgPlot, annualSimNorUci[0, *], normData(annual_IHR_simUci), /overplot, psym = 2, color = 'green', $
+	symsize = 0.75
+cgPlot, annualSimNorUci[0, *], normData(annual_IHR_simUci), /overplot, linestyle = 0, color = 'green'
+cgPlot, annualSimNorOgi[0, *], normData(annual_IHR_simOgi), /overplot, psym = 4, color = 'violet', $
+	symsize = 0.75
+cgPlot, annualSimNorOgi[0, *], normData(annual_IHR_simOgi), /overplot, linestyle = 0, color = 'violet'
 
 
-AL_Legend, ['OGI 4-month', 'OGI 12-month', 'UCI', 'NOAA 4-month', 'NOAA 12-month'], $
-	psym = [4, 4, 2, 5, 5], linestyle = [0, 0, 0, 0, 0], box = 1, $
-	color = ['red', 'violet', 'forest green', 'steelblue', 'blue violet'], $
-	background_color = 'rose', position = [1988, 9]
+AL_Legend, ['OGI', 'OGI Sim', 'UCI', 'UCI Sim', 'NOAA', 'NOAA Sim'], $
+	psym = [4, 4, 2, 2, 5, 5], linestyle = [0, 0, 0, 0, 0, 0], box = 1, $
+	color = ['red', 'violet', 'forest green', 'green', 'steelblue', 'blue violet'], $
+	background_color = 'rose', position = [1988, 2.5], charsize = 0.9
 close_device
 
 spawn, 'gv temp.eps'
