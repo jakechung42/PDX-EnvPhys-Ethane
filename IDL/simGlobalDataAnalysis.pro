@@ -444,7 +444,7 @@ FUNCTION normData, input
 avgVar = mean(input, /NAN)
 out = input[*] - avgVar
 
-return, out 
+return, input ;the output should be out but change it to this to see non-normalized
 
 end
 
@@ -452,14 +452,14 @@ end
 FUNCTION calSimGlobal, path, obsArr, bin_bound, bin_mid
 
 ;This function calculates the simulated global averages and IHR from the input
-;parameters from only one data network.
+;parameters for only one data network.
 ;description of each variable
-;path: string array contains the path to the BPCH file 
-;obsArr: structure of the observed data 
+;path: the path directory for the bpch file 
+;obsArr: the observed data structure
 ;bin_bound: the vector that contains the latitude bin boundaries 
 ;bin_mid: the middle latitude of the latitude bands
 
-;make the sim data from the obs data and the bpch file
+;build the sim data
 simArr = buildSimData(obsArr, path)
 ;make the latitude bins 
 sim_bin = MakeLatBin(bin_bound, simArr.lat, simArr.month, simArr.year, simArr.ratio)
@@ -478,13 +478,19 @@ simAnnualMean = Rotate(out, 1)
 
 ;separate the northern and southern hemispheres
 souSim = getSouth(simAnnualMean)
-norSim = getSouth(simAnnualMean)
+norSim = getNorth(simAnnualMean)
 ;calculate hemispheric mean 
 souAnnualMean = weightedMean(bin_mid, bin_bound, souSim)
 norAnnualMean = weightedMean(bin_mid, bin_bound, norSim)
 ;calculate IHR 
 annual_IHR = norAnnualMean[1, *]/souAnnualMean[1, *]
-;combine everything into a structure to output from the function
+;combine everything into a matrix to output from the function
+out = [norAnnualMean[0, *], norAnnualMean[1, *], souAnnualMean[1, *], annual_IHR]
+
+return, out
+
+end
+
 ;======================================================================
 ;start main program
 PRO simGlobalDataAnalysis 
@@ -640,72 +646,57 @@ annual_ihr_ogi_err = sqrt((annual_nor_ogi[2, *]/annual_sou_ogi[1, *])^2 + $
 	(annual_nor_ogi[1, *]*annual_sou_ogi[2, *]/annual_sou_ogi[1, *]^2)^2)
 	
 ;getting the simulated data 
-path = "/home/excluded-from-backup/data/C2H6/trac_avg.PSUSF_1981_2015.bpch"
-simNoaa = buildSimData(noaa, path)
-simUci = buildSimData(uci, path)
-simOgi = buildSimData(ogi, path)
-;create latitude bins from the simulated data using the same bin bound as the obs data
-;change from struct to matrix array
-simNoaa_bin = MakeLatBin(bin_bound, simNoaa.lat, simNoaa.month, simNoaa.year, simNoaa.ratio)
-simUci_bin = MakeLatBin(bin_bound, simUci.lat, simUci.month, simUci.year, simUci.ratio)
-simOgi_bin = MakeLatBin(bin_bound, simOgi.lat, simOgi.month, simOgi.year, simOgi.ratio)
-;calculate the annual simulated average 
-simNoaaAnnualMean = takeSimAnnualMean(bin_mid, simNoaa_bin)
-simUciAnnualMean = takeSimAnnualMean(bin_mid, simUci_bin)
-simOgiAnnualMean = takeSimAnnualMean(bin_mid, simOgi_bin)
-;allign the simulated data using the fitYear function
-;NOAA array
-out = []
-for q = 0, n_elements(bin_mid)-1 do begin
-	x = where(simNoaaAnnualMean[0, *] eq bin_mid[q])
-	temp_array = simNoaaAnnualMean[*, x]
-	temp_out = fitYear(simNoaa.year, temp_array)
-	temp_out = Rotate(temp_out, 3)
-	out = [out, temp_out]
-endfor 
-simNoaaAnnualMean = Rotate(out, 1)
-;UCI array
-out = []
-for q = 0, n_elements(bin_mid)-1 do begin
-	x = where(simUciAnnualMean[0, *] eq bin_mid[q])
-	temp_array = simUciAnnualMean[*, x]
-	temp_out = fitYear(simUci.year, temp_array)
-	temp_out = Rotate(temp_out, 3)
-	out = [out, temp_out]
-endfor 
-simUciAnnualMean = Rotate(out, 1)
-;OGI array
-out = []
-for q = 0, n_elements(bin_mid)-1 do begin
-	x = where(simOgiAnnualMean[0, *] eq bin_mid[q])
-	temp_array = simOgiAnnualMean[*, x]
-	temp_out = fitYear(simOgi.year, temp_array)
-	temp_out = Rotate(temp_out, 3)
-	out = [out, temp_out]
-endfor 
-simOgiAnnualMean = Rotate(out, 1)
-;break the annual array into 2 smaller arrays contains the northern hemisphere data 
-;and southern hemisphere data
-sou_SimUci = getSouth(simUciAnnualMean)
-nor_SimUci = getNorth(simUciAnnualMean)
-sou_SimNoaa = getSouth(simNoaaAnnualMean)
-nor_SimNoaa = getNorth(simNoaaAnnualMean)
-sou_SimOgi = getSouth(simOgiAnnualMean)
-nor_SimOgi = getNorth(simOgiAnnualMean) 
-;calculate the northern hemispheric mean with weights and everything
-;UCI
-annualSimSouUci = weightedMean(bin_mid, bin_bound, sou_SimUci)
-annualSimNorUci = weightedMean(bin_mid, bin_bound, nor_SimUci)
-;NOAA
-annualSimSouNoaa = weightedMean(bin_mid, bin_bound, sou_SimNoaa)
-annualSimNorNoaa = weightedMean(bin_mid, bin_bound, nor_SimNoaa)
-;OGI
-annualSimSouOgi = weightedMean(bin_mid, bin_bound, sou_SimOgi)
-annualSimNorOgi = weightedMean(bin_mid, bin_bound, nor_SimOgi)
-;IHR for all simulated data networks
-annual_IHR_simNoaa = annualSimNorNoaa[1, *]/annualSimSouNoaa[1, *]
-annual_IHR_simUci = annualSimNorUci[1, *]/annualSimSouUci[1, *]
-annual_IHR_simOgi = annualSimNorOgi[1, *]/annualSimSouOgi[1, *]
+
+;Sce A: default emissions based on Xiao et al. (2008)
+SceA_path = "/home/excluded-from-backup/data/C2H6/trac_avg.spinup_GFED4_MAVG_1981_2015.198101010000"
+
+;Sce B: emissions based on budget from Simpson et al. (2012)
+SceB_path = "/home/excluded-from-backup/data/C2H6/trac_avg.SimpsonSF_1981_2015.bpch"
+
+;Sce C: Firn C2H6 based on Aydin et al. (2011)
+SceC_path = "/home/excluded-from-backup/data/C2H6/trac_avg.AydinSF_1981_2015.bpch"
+
+;Sce D: same as C but normailized to A
+SceD_path = "/home/excluded-from-backup/data/C2H6/trac_avg.AydinAbsSF_1981_2015.bpch"
+
+;Sce E: Rice et al. (2016) emission scenario normailized to A
+SceE_path = "/home/excluded-from-backup/data/C2H6/trac_avg.PSUSF_1981_2015.bpch"
+
+;Sce F: same as E but normalized to B 
+SceF_path = "/home/excluded-from-backup/data/C2H6/trac_avg.PSU_MER3BB_MER18FF_1981_2015.bpch"
+
+;calling function calSimGlobal to calculate IHR and sim average from simData for all networks and scenarios
+;output of the sim arrays are year, nor avg, sou avg, IHR
+
+;Sce A:
+SceA_noaa = calSimGlobal(SceA_path, noaa, bin_bound, bin_mid)
+SceA_uci = calSimGlobal(SceA_path, uci, bin_bound, bin_mid)
+SceA_ogi = calSimGlobal(SceA_path, ogi, bin_bound, bin_mid)
+
+;Sce B:
+SceB_noaa = calSimGlobal(SceB_path, noaa, bin_bound, bin_mid)
+SceB_uci = calSimGlobal(SceB_path, uci, bin_bound, bin_mid)
+SceB_ogi = calSimGlobal(SceB_path, ogi, bin_bound, bin_mid)
+
+;Sce C:
+SceC_noaa = calSimGlobal(SceC_path, noaa, bin_bound, bin_mid)
+SceC_uci = calSimGlobal(SceC_path, uci, bin_bound, bin_mid)
+SceC_ogi = calSimGlobal(SceC_path, ogi, bin_bound, bin_mid)
+
+;Sce D:
+SceD_noaa = calSimGlobal(SceD_path, noaa, bin_bound, bin_mid)
+SceD_uci = calSimGlobal(SceD_path, uci, bin_bound, bin_mid)
+SceD_ogi = calSimGlobal(SceD_path, ogi, bin_bound, bin_mid)
+
+;Sce E:
+SceE_noaa = calSimGlobal(SceE_path, noaa, bin_bound, bin_mid)
+SceE_uci = calSimGlobal(SceE_path, uci, bin_bound, bin_mid)
+SceE_ogi = calSimGlobal(SceE_path, ogi, bin_bound, bin_mid)
+
+;Sce F:
+SceF_noaa = calSimGlobal(SceF_path, noaa, bin_bound, bin_mid)
+SceF_uci = calSimGlobal(SceF_path, uci, bin_bound, bin_mid)
+SceF_ogi = calSimGlobal(SceF_path, ogi, bin_bound, bin_mid)
 
 
 ;plotting procedure
@@ -720,80 +711,257 @@ multiplot, /default    ; resets multiplot settings
 multiplot, [1,3], ygap=0.002, xgap=0;  sets up multiplot 
 
 ;plot northern hemisphere
+;yrange for normalized -200, 300
 cgPlot, annual_nor_noaa[0, *], annual_nor_noaa[1, *], xrange = [1982, 2016], xticklen = 1, xgridstyle = 1, $
-	xticks = 17, /nodata, yrange = [-300,300], ytitle = 'Mixing ratio(pptv)', $
+	xticks = 17, /nodata, yrange = [500,1500], ytitle = 'Mixing ratio(pptv)', $
 	title = 'Time series of global Ethane NOAA, OGI sampled in Mar, Jun, Sep, Dec compared with full data'
-cgPlot, annual_nor_noaa[0, *], normData(annual_nor_noaa[1, *]), /overplot, psym = 5, color = 'steelblue', $
+cgPlot, annual_nor_noaa[0, *], normData(annual_nor_noaa[1, *]), /overplot, psym = 5, color = 'black', $
 	err_yhigh = annual_nor_noaa[2, *], err_ylow = annual_nor_noaa[2, *]
-cgPlot, annual_nor_uci[0, *], normData(annual_nor_uci[1, *]), /overplot, psym = 2, color = 'forest green', $
+cgPlot, annual_nor_uci[0, *], normData(annual_nor_uci[1, *]), /overplot, psym = 2, color = 'black', $
 	err_yhigh = annual_nor_uci[2, *], err_ylow = annual_nor_uci[2, *]
-cgPlot, annual_nor_ogi[0, *], normData(annual_nor_ogi[1, *]), /overplot, psym = 4, color = 'red', $
+cgPlot, annual_nor_ogi[0, *], normData(annual_nor_ogi[1, *]), /overplot, psym = 4, color = 'black', $
 	err_yhigh = annual_nor_ogi[2, *], err_ylow = annual_nor_ogi[2, *]
 	
 ;plot the sim data
-cgPlot, annualSimNorNoaa[0, *], normData(annualSimNorNoaa[1, *]), /overplot, psym = 5, color = 'blue violet', $
+;Sce A:
+cgPlot, SceA_noaa[0, *], normData(SceA_noaa[1, *]), /overplot, psym = 5, color = 'blue violet', $
 	symsize = 0.75
-cgPlot, annualSimNorNoaa[0, *], normData(annualSimNorNoaa[1, *]), /overplot, linestyle = 0, color = 'blue violet' ;add line
-cgPlot, annualSimNorUci[0, *], normData(annualSimNorUci[1, *]), /overplot, psym = 2, color = 'green', $
+cgPlot, SceA_noaa[0, *], normData(SceA_noaa[1, *]), /overplot, linestyle = 0, color = 'blue violet' ;add line
+cgPlot, SceA_uci[0, *], normData(SceA_uci[1, *]), /overplot, psym = 2, color = 'blue violet', $
 	symsize = 0.75
-cgPlot, annualSimNorUci[0, *], normData(annualSimNorUci[1, *]), /overplot, linestyle = 0, color = 'green';add line
-cgPlot, annualSimNorOgi[0, *], normData(annualSimNorOgi[1, *]), /overplot, psym = 4, color = 'violet', $
+cgPlot, SceA_uci[0, *], normData(SceA_uci[1, *]), /overplot, linestyle = 0, color = 'blue violet';add line
+cgPlot, SceA_ogi[0, *], normData(SceA_ogi[1, *]), /overplot, psym = 4, color = 'blue violet', $
 	symsize = 0.75
-cgPlot, annualSimNorOgi[0, *], normData(annualSimNorOgi[1, *]), /overplot, linestyle = 0, color = 'violet';add line
+cgPlot, SceA_ogi[0, *], normData(SceA_ogi[1, *]), /overplot, linestyle = 0, color = 'blue violet';add line
+
+;Sce B:
+cgPlot, SceB_noaa[0, *], normData(SceB_noaa[1, *]), /overplot, psym = 5, color = 'blue', $
+	symsize = 0.75
+cgPlot, SceB_noaa[0, *], normData(SceB_noaa[1, *]), /overplot, linestyle = 0, color = 'blue' ;add line
+cgPlot, SceB_uci[0, *], normData(SceB_uci[1, *]), /overplot, psym = 2, color = 'blue', $
+	symsize = 0.75
+cgPlot, SceB_uci[0, *], normData(SceB_uci[1, *]), /overplot, linestyle = 0, color = 'blue';add line
+cgPlot, SceB_ogi[0, *], normData(SceB_ogi[1, *]), /overplot, psym = 4, color = 'blue', $
+	symsize = 0.75
+cgPlot, SceB_ogi[0, *], normData(SceB_ogi[1, *]), /overplot, linestyle = 0, color = 'blue';add line
+
+;Sce C:
+cgPlot, SceC_noaa[0, *], normData(SceC_noaa[1, *]), /overplot, psym = 5, color = 'forest green', $
+	symsize = 0.75
+cgPlot, SceC_noaa[0, *], normData(SceC_noaa[1, *]), /overplot, linestyle = 0, color = 'forest green' ;add line
+cgPlot, SceC_uci[0, *], normData(SceC_uci[1, *]), /overplot, psym = 2, color = 'forest green', $
+	symsize = 0.75
+cgPlot, SceC_uci[0, *], normData(SceC_uci[1, *]), /overplot, linestyle = 0, color = 'forest green';add line
+cgPlot, SceC_ogi[0, *], normData(SceC_ogi[1, *]), /overplot, psym = 4, color = 'forest green', $
+	symsize = 0.75
+cgPlot, SceC_ogi[0, *], normData(SceC_ogi[1, *]), /overplot, linestyle = 0, color = 'forest green';add line
+
+;Sce D:
+cgPlot, SceD_noaa[0, *], normData(SceD_noaa[1, *]), /overplot, psym = 5, color = 'lime green', $
+	symsize = 0.75
+cgPlot, SceD_noaa[0, *], normData(SceD_noaa[1, *]), /overplot, linestyle = 0, color = 'lime green' ;add line
+cgPlot, SceD_uci[0, *], normData(SceD_uci[1, *]), /overplot, psym = 2, color = 'lime green', $
+	symsize = 0.75
+cgPlot, SceD_uci[0, *], normData(SceD_uci[1, *]), /overplot, linestyle = 0, color = 'lime green';add line
+cgPlot, SceD_ogi[0, *], normData(SceD_ogi[1, *]), /overplot, psym = 4, color = 'lime green', $
+	symsize = 0.75
+cgPlot, SceD_ogi[0, *], normData(SceD_ogi[1, *]), /overplot, linestyle = 0, color = 'lime green';add line
+
+;Sce E:
+cgPlot, SceE_noaa[0, *], normData(SceE_noaa[1, *]), /overplot, psym = 5, color = 'red', $
+	symsize = 0.75
+cgPlot, SceE_noaa[0, *], normData(SceE_noaa[1, *]), /overplot, linestyle = 0, color = 'red' ;add line
+cgPlot, SceE_uci[0, *], normData(SceE_uci[1, *]), /overplot, psym = 2, color = 'red', $
+	symsize = 0.75
+cgPlot, SceE_uci[0, *], normData(SceE_uci[1, *]), /overplot, linestyle = 0, color = 'red';add line
+cgPlot, SceE_ogi[0, *], normData(SceE_ogi[1, *]), /overplot, psym = 4, color = 'red', $
+	symsize = 0.75
+cgPlot, SceE_ogi[0, *], normData(SceE_ogi[1, *]), /overplot, linestyle = 0, color = 'red';add line
+
+;Sce F:
+cgPlot, SceF_noaa[0, *], normData(SceF_noaa[1, *]), /overplot, psym = 5, color = 'Magenta', $
+	symsize = 0.75
+cgPlot, SceF_noaa[0, *], normData(SceF_noaa[1, *]), /overplot, linestyle = 0, color = 'Magenta' ;add line
+cgPlot, SceF_uci[0, *], normData(SceF_uci[1, *]), /overplot, psym = 2, color = 'Magenta', $
+	symsize = 0.75
+cgPlot, SceF_uci[0, *], normData(SceF_uci[1, *]), /overplot, linestyle = 0, color = 'Magenta';add line
+cgPlot, SceF_ogi[0, *], normData(SceF_ogi[1, *]), /overplot, psym = 4, color = 'Magenta', $
+	symsize = 0.75
+cgPlot, SceF_ogi[0, *], normData(SceF_ogi[1, *]), /overplot, linestyle = 0, color = 'Magenta';add line
 	
 multiplot, /doyaxis, /doxaxis
 
 ;plot southern hemisphere
+;yrange for normalized -200, 300
 cgPlot, annual_sou_noaa[0, *], annual_sou_noaa[1, *], /nodata, xrange = [1982, 2016], $
-	xticklen = 1, xgridstyle = 1, xticks = 17, XTickformat='(A1)', yrange = [-200,300], $
+	xticklen = 1, xgridstyle = 1, xticks = 17, XTickformat='(A1)', yrange = [200,800], $
 	ytitle = 'Mixing ratio(pptv)'
-cgPlot, annual_sou_noaa[0, *], normData(annual_sou_noaa[1, *]), /overplot, psym = 5, color = 'steelblue', $
+cgPlot, annual_sou_noaa[0, *], normData(annual_sou_noaa[1, *]), /overplot, psym = 5, color = 'black', $
 	err_yhigh = annual_sou_noaa[2, *], err_ylow = annual_sou_noaa[2, *]
-cgPlot, annual_sou_uci[0, *], normData(annual_sou_uci[1, *]), /overplot, psym = 2, color = 'forest green', $
+cgPlot, annual_sou_uci[0, *], normData(annual_sou_uci[1, *]), /overplot, psym = 2, color = 'black', $
 	err_yhigh = annual_sou_uci[2, *], err_ylow = annual_sou_uci[2, *]
-cgPlot, annual_sou_ogi[0, *], normData(annual_sou_ogi[1, *]), /overplot, psym = 4, color = 'red', $
+cgPlot, annual_sou_ogi[0, *], normData(annual_sou_ogi[1, *]), /overplot, psym = 4, color = 'black', $
 	err_yhigh = annual_sou_ogi[2, *], err_ylow = annual_sou_ogi[2, *]
 	
 ;plot the sim data
-cgPlot, annualSimSouNoaa[0, *], normData(annualSimSouNoaa[1, *]), /overplot, psym = 5, color = 'blue violet', $
+;Sce A:
+cgPlot, SceA_noaa[0, *], normData(SceA_noaa[2, *]), /overplot, psym = 5, color = 'blue violet', $
 	symsize = 0.75
-cgPlot, annualSimSouNoaa[0, *], normData(annualSimSouNoaa[1, *]), /overplot, linestyle = 0, color = 'blue violet'
-cgPlot, annualSimSouUci[0, *], normData(annualSimSouUci[1, *]), /overplot, psym = 2, color = 'green', $
+cgPlot, SceA_noaa[0, *], normData(SceA_noaa[2, *]), /overplot, linestyle = 0, color = 'blue violet' ;add line
+cgPlot, SceA_uci[0, *], normData(SceA_uci[2, *]), /overplot, psym = 2, color = 'blue violet', $
 	symsize = 0.75
-cgPlot, annualSimSouUci[0, *], normData(annualSimSouUci[1, *]), /overplot, linestyle = 0, color = 'green'
-cgPlot, annualSimSouOgi[0, *], normData(annualSimSouOgi[1, *]), /overplot, psym = 4, color = 'violet', $
+cgPlot, SceA_uci[0, *], normData(SceA_uci[2, *]), /overplot, linestyle = 0, color = 'blue violet';add line
+cgPlot, SceA_ogi[0, *], normData(SceA_ogi[2, *]), /overplot, psym = 4, color = 'blue violet', $
 	symsize = 0.75
-cgPlot, annualSimSouOgi[0, *], normData(annualSimSouOgi[1, *]), /overplot, linestyle = 0, color = 'violet'
+cgPlot, SceA_ogi[0, *], normData(SceA_ogi[2, *]), /overplot, linestyle = 0, color = 'blue violet';add line
+
+;Sce B:
+cgPlot, SceB_noaa[0, *], normData(SceB_noaa[2, *]), /overplot, psym = 5, color = 'blue', $
+	symsize = 0.75
+cgPlot, SceB_noaa[0, *], normData(SceB_noaa[2, *]), /overplot, linestyle = 0, color = 'blue' ;add line
+cgPlot, SceB_uci[0, *], normData(SceB_uci[2, *]), /overplot, psym = 2, color = 'blue', $
+	symsize = 0.75
+cgPlot, SceB_uci[0, *], normData(SceB_uci[2, *]), /overplot, linestyle = 0, color = 'blue';add line
+cgPlot, SceB_ogi[0, *], normData(SceB_ogi[2, *]), /overplot, psym = 4, color = 'blue', $
+	symsize = 0.75
+cgPlot, SceB_ogi[0, *], normData(SceB_ogi[2, *]), /overplot, linestyle = 0, color = 'blue';add line
+
+;Sce C:
+cgPlot, SceC_noaa[0, *], normData(SceC_noaa[2, *]), /overplot, psym = 5, color = 'forest green', $
+	symsize = 0.75
+cgPlot, SceC_noaa[0, *], normData(SceC_noaa[2, *]), /overplot, linestyle = 0, color = 'forest green' ;add line
+cgPlot, SceC_uci[0, *], normData(SceC_uci[2, *]), /overplot, psym = 2, color = 'forest green', $
+	symsize = 0.75
+cgPlot, SceC_uci[0, *], normData(SceC_uci[2, *]), /overplot, linestyle = 0, color = 'forest green';add line
+cgPlot, SceC_ogi[0, *], normData(SceC_ogi[2, *]), /overplot, psym = 4, color = 'forest green', $
+	symsize = 0.75
+cgPlot, SceC_ogi[0, *], normData(SceC_ogi[2, *]), /overplot, linestyle = 0, color = 'forest green';add line
+
+;Sce D:
+cgPlot, SceD_noaa[0, *], normData(SceD_noaa[2, *]), /overplot, psym = 5, color = 'lime green', $
+	symsize = 0.75
+cgPlot, SceD_noaa[0, *], normData(SceD_noaa[2, *]), /overplot, linestyle = 0, color = 'lime green' ;add line
+cgPlot, SceD_uci[0, *], normData(SceD_uci[2, *]), /overplot, psym = 2, color = 'lime green', $
+	symsize = 0.75
+cgPlot, SceD_uci[0, *], normData(SceD_uci[2, *]), /overplot, linestyle = 0, color = 'lime green';add line
+cgPlot, SceD_ogi[0, *], normData(SceD_ogi[2, *]), /overplot, psym = 4, color = 'lime green', $
+	symsize = 0.75
+cgPlot, SceD_ogi[0, *], normData(SceD_ogi[2, *]), /overplot, linestyle = 0, color = 'lime green';add line
+
+;Sce E:
+cgPlot, SceE_noaa[0, *], normData(SceE_noaa[2, *]), /overplot, psym = 5, color = 'red', $
+	symsize = 0.75
+cgPlot, SceE_noaa[0, *], normData(SceE_noaa[2, *]), /overplot, linestyle = 0, color = 'red' ;add line
+cgPlot, SceE_uci[0, *], normData(SceE_uci[2, *]), /overplot, psym = 2, color = 'red', $
+	symsize = 0.75
+cgPlot, SceE_uci[0, *], normData(SceE_uci[2, *]), /overplot, linestyle = 0, color = 'red';add line
+cgPlot, SceE_ogi[0, *], normData(SceE_ogi[2, *]), /overplot, psym = 4, color = 'red', $
+	symsize = 0.75
+cgPlot, SceE_ogi[0, *], normData(SceE_ogi[2, *]), /overplot, linestyle = 0, color = 'red';add line
+
+;Sce F:
+cgPlot, SceF_noaa[0, *], normData(SceF_noaa[2, *]), /overplot, psym = 5, color = 'Magenta', $
+	symsize = 0.75
+cgPlot, SceF_noaa[0, *], normData(SceF_noaa[2, *]), /overplot, linestyle = 0, color = 'Magenta' ;add line
+cgPlot, SceF_uci[0, *], normData(SceF_uci[2, *]), /overplot, psym = 2, color = 'Magenta', $
+	symsize = 0.75
+cgPlot, SceF_uci[0, *], normData(SceF_uci[2, *]), /overplot, linestyle = 0, color = 'Magenta';add line
+cgPlot, SceF_ogi[0, *], normData(SceF_ogi[2, *]), /overplot, psym = 4, color = 'Magenta', $
+	symsize = 0.75
+cgPlot, SceF_ogi[0, *], normData(SceF_ogi[2, *]), /overplot, linestyle = 0, color = 'Magenta';add line
 
 multiplot, /doyaxis, /doxaxis
 
 ;plot IHR
+;yrange for non-normalized -1.5, 1
 cgPlot, annual_nor_noaa[1, *], annual_ihr_noaa, /nodata, xtitle = 'Years', ytitle = 'IHR', $
-	xrange = [1982, 2016], yrange = [-2, 2], $
+	xrange = [1982, 2016], yrange = [1.5, 6], $
 	xticklen = 1, xgridstyle = 1, xticks = 17
-cgPlot, annual_sou_noaa[0, *], normData(annual_ihr_noaa), /overplot, psym = 5, color = 'steelblue', $
+cgPlot, annual_sou_noaa[0, *], normData(annual_ihr_noaa), /overplot, psym = 5, color = 'black', $
 	err_yhigh = annual_ihr_noaa_err, err_ylow = annual_ihr_noaa_err
-cgPlot, annual_sou_uci[0, *], normData(annual_ihr_uci), /overplot, psym = 2, color = 'forest green', $
+cgPlot, annual_sou_uci[0, *], normData(annual_ihr_uci), /overplot, psym = 2, color = 'black', $
 	err_yhigh = annual_ihr_uci_err, err_ylow =annual_ihr_uci_err
-cgPlot, annual_sou_ogi[0, *], normData(annual_ihr_ogi), /overplot, psym = 4, color = 'red', $
+cgPlot, annual_sou_ogi[0, *], normData(annual_ihr_ogi), /overplot, psym = 4, color = 'black', $
 	err_yhigh = annual_ihr_ogi_err, err_ylow = annual_ihr_ogi_err
 
-;plot the full data
-cgPlot, annualSimNorNoaa[0, *], normData(annual_IHR_simNoaa), /overplot, psym = 5, color = 'blue violet', $
+;plot the sim data
+;Sce A:
+cgPlot, SceA_noaa[0, *], normData(SceA_noaa[3, *]), /overplot, psym = 5, color = 'blue violet', $
 	symsize = 0.75
-cgPlot, annualSimNorNoaa[0, *], normData(annual_IHR_simNoaa), /overplot, linestyle = 0, color = 'blue violet'
-cgPlot, annualSimNorUci[0, *], normData(annual_IHR_simUci), /overplot, psym = 2, color = 'green', $
+cgPlot, SceA_noaa[0, *], normData(SceA_noaa[3, *]), /overplot, linestyle = 0, color = 'blue violet' ;add line
+cgPlot, SceA_uci[0, *], normData(SceA_uci[3, *]), /overplot, psym = 2, color = 'blue violet', $
 	symsize = 0.75
-cgPlot, annualSimNorUci[0, *], normData(annual_IHR_simUci), /overplot, linestyle = 0, color = 'green'
-cgPlot, annualSimNorOgi[0, *], normData(annual_IHR_simOgi), /overplot, psym = 4, color = 'violet', $
+cgPlot, SceA_uci[0, *], normData(SceA_uci[3, *]), /overplot, linestyle = 0, color = 'blue violet';add line
+cgPlot, SceA_ogi[0, *], normData(SceA_ogi[3, *]), /overplot, psym = 4, color = 'blue violet', $
 	symsize = 0.75
-cgPlot, annualSimNorOgi[0, *], normData(annual_IHR_simOgi), /overplot, linestyle = 0, color = 'violet'
+cgPlot, SceA_ogi[0, *], normData(SceA_ogi[3, *]), /overplot, linestyle = 0, color = 'blue violet';add line
+
+;Sce B:
+cgPlot, SceB_noaa[0, *], normData(SceB_noaa[3, *]), /overplot, psym = 5, color = 'blue', $
+	symsize = 0.75
+cgPlot, SceB_noaa[0, *], normData(SceB_noaa[3, *]), /overplot, linestyle = 0, color = 'blue' ;add line
+cgPlot, SceB_uci[0, *], normData(SceB_uci[3, *]), /overplot, psym = 2, color = 'blue', $
+	symsize = 0.75
+cgPlot, SceB_uci[0, *], normData(SceB_uci[3, *]), /overplot, linestyle = 0, color = 'blue';add line
+cgPlot, SceB_ogi[0, *], normData(SceB_ogi[3, *]), /overplot, psym = 4, color = 'blue', $
+	symsize = 0.75
+cgPlot, SceB_ogi[0, *], normData(SceB_ogi[3, *]), /overplot, linestyle = 0, color = 'blue';add line
+
+;Sce C:
+cgPlot, SceC_noaa[0, *], normData(SceC_noaa[3, *]), /overplot, psym = 5, color = 'forest green', $
+	symsize = 0.75
+cgPlot, SceC_noaa[0, *], normData(SceC_noaa[3, *]), /overplot, linestyle = 0, color = 'forest green' ;add line
+cgPlot, SceC_uci[0, *], normData(SceC_uci[3, *]), /overplot, psym = 2, color = 'forest green', $
+	symsize = 0.75
+cgPlot, SceC_uci[0, *], normData(SceC_uci[3, *]), /overplot, linestyle = 0, color = 'forest green';add line
+cgPlot, SceC_ogi[0, *], normData(SceC_ogi[3, *]), /overplot, psym = 4, color = 'forest green', $
+	symsize = 0.75
+cgPlot, SceC_ogi[0, *], normData(SceC_ogi[3, *]), /overplot, linestyle = 0, color = 'forest green';add line
+
+;Sce D:
+cgPlot, SceD_noaa[0, *], normData(SceD_noaa[3, *]), /overplot, psym = 5, color = 'lime green', $
+	symsize = 0.75
+cgPlot, SceD_noaa[0, *], normData(SceD_noaa[3, *]), /overplot, linestyle = 0, color = 'lime green' ;add line
+cgPlot, SceD_uci[0, *], normData(SceD_uci[3, *]), /overplot, psym = 2, color = 'lime green', $
+	symsize = 0.75
+cgPlot, SceD_uci[0, *], normData(SceD_uci[3, *]), /overplot, linestyle = 0, color = 'lime green';add line
+cgPlot, SceD_ogi[0, *], normData(SceD_ogi[3, *]), /overplot, psym = 4, color = 'lime green', $
+	symsize = 0.75
+cgPlot, SceD_ogi[0, *], normData(SceD_ogi[3, *]), /overplot, linestyle = 0, color = 'lime green';add line
+
+;Sce E:
+cgPlot, SceE_noaa[0, *], normData(SceE_noaa[3, *]), /overplot, psym = 5, color = 'red', $
+	symsize = 0.75
+cgPlot, SceE_noaa[0, *], normData(SceE_noaa[3, *]), /overplot, linestyle = 0, color = 'red' ;add line
+cgPlot, SceE_uci[0, *], normData(SceE_uci[3, *]), /overplot, psym = 2, color = 'red', $
+	symsize = 0.75
+cgPlot, SceE_uci[0, *], normData(SceE_uci[3, *]), /overplot, linestyle = 0, color = 'red';add line
+cgPlot, SceE_ogi[0, *], normData(SceE_ogi[3, *]), /overplot, psym = 4, color = 'red', $
+	symsize = 0.75
+cgPlot, SceE_ogi[0, *], normData(SceE_ogi[3, *]), /overplot, linestyle = 0, color = 'red';add line
+
+;Sce F:
+cgPlot, SceF_noaa[0, *], normData(SceF_noaa[3, *]), /overplot, psym = 5, color = 'Magenta', $
+	symsize = 0.75
+cgPlot, SceF_noaa[0, *], normData(SceF_noaa[3, *]), /overplot, linestyle = 0, color = 'Magenta' ;add line
+cgPlot, SceF_uci[0, *], normData(SceF_uci[3, *]), /overplot, psym = 2, color = 'Magenta', $
+	symsize = 0.75
+cgPlot, SceF_uci[0, *], normData(SceF_uci[3, *]), /overplot, linestyle = 0, color = 'Magenta';add line
+cgPlot, SceF_ogi[0, *], normData(SceF_ogi[3, *]), /overplot, psym = 4, color = 'Magenta', $
+	symsize = 0.75
+cgPlot, SceF_ogi[0, *], normData(SceF_ogi[3, *]), /overplot, linestyle = 0, color = 'Magenta';add line
 
 
-AL_Legend, ['OGI', 'OGI Sim', 'UCI', 'UCI Sim', 'NOAA', 'NOAA Sim'], $
-	psym = [4, 4, 2, 2, 5, 5], linestyle = [0, 0, 0, 0, 0, 0], box = 1, $
-	color = ['red', 'violet', 'forest green', 'green', 'steelblue', 'blue violet'], $
-	background_color = 'rose', position = [1988, 2.5], charsize = 0.9
+cgLegend, title = ['Sce A', 'Sce B', 'Sce C', 'Sce D', 'Sce E', 'Sce F'], $
+	psym = [3, 3, 3, 3, 3, 3], linestyle = [0, 0, 0, 0, 0, 0], $
+	color = ['blue violet', 'blue', 'forest green', 'lime green', 'red', 'Magenta'], $
+	location = [1988, 5.9], charsize = 0.82, /data, vspace = 1
+
+; cgLegend, title = ['NOAA', 'UCI', 'OGI'], $
+	; psym = [5, 2, 4], $
+	; color = ['black', 'black', 'black'], $
+	; location = [1988, 0.5], charsize = 0.8, $
+	; length = 0.0, /data, vspace = 1
 close_device
 
 spawn, 'gv temp.eps'
