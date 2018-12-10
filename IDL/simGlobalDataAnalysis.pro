@@ -444,7 +444,7 @@ FUNCTION normData, input
 avgVar = mean(input, /NAN)
 out = input[*] - avgVar
 
-return, input ;the output should be out but change it to this to see non-normalized
+return, out
 
 end
 
@@ -713,7 +713,7 @@ multiplot, [1,3], ygap=0.002, xgap=0;  sets up multiplot
 ;plot northern hemisphere
 ;yrange for normalized -200, 300
 cgPlot, annual_nor_noaa[0, *], annual_nor_noaa[1, *], xrange = [1982, 2016], xticklen = 1, xgridstyle = 1, $
-	xticks = 17, /nodata, yrange = [500,1500], ytitle = 'Mixing ratio(pptv)', $
+	xticks = 17, /nodata, yrange = [-200,300], ytitle = 'Mixing ratio(pptv)', $
 	title = 'Time series of global Ethane NOAA, OGI sampled in Mar, Jun, Sep, Dec compared with full data'
 cgPlot, annual_nor_noaa[0, *], normData(annual_nor_noaa[1, *]), /overplot, psym = 5, color = 'black', $
 	err_yhigh = annual_nor_noaa[2, *], err_ylow = annual_nor_noaa[2, *]
@@ -794,7 +794,7 @@ multiplot, /doyaxis, /doxaxis
 ;plot southern hemisphere
 ;yrange for normalized -200, 300
 cgPlot, annual_sou_noaa[0, *], annual_sou_noaa[1, *], /nodata, xrange = [1982, 2016], $
-	xticklen = 1, xgridstyle = 1, xticks = 17, XTickformat='(A1)', yrange = [200,800], $
+	xticklen = 1, xgridstyle = 1, xticks = 17, XTickformat='(A1)', yrange = [-200,300], $
 	ytitle = 'Mixing ratio(pptv)'
 cgPlot, annual_sou_noaa[0, *], normData(annual_sou_noaa[1, *]), /overplot, psym = 5, color = 'black', $
 	err_yhigh = annual_sou_noaa[2, *], err_ylow = annual_sou_noaa[2, *]
@@ -875,7 +875,7 @@ multiplot, /doyaxis, /doxaxis
 ;plot IHR
 ;yrange for non-normalized -1.5, 1
 cgPlot, annual_nor_noaa[1, *], annual_ihr_noaa, /nodata, xtitle = 'Years', ytitle = 'IHR', $
-	xrange = [1982, 2016], yrange = [1.5, 6], $
+	xrange = [1982, 2016], yrange = [-1.5, 1], $
 	xticklen = 1, xgridstyle = 1, xticks = 17
 cgPlot, annual_sou_noaa[0, *], normData(annual_ihr_noaa), /overplot, psym = 5, color = 'black', $
 	err_yhigh = annual_ihr_noaa_err, err_ylow = annual_ihr_noaa_err
