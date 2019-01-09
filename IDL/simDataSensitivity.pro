@@ -74,6 +74,8 @@ endfor
 ;the annualSimGlobal variable contains the simulated annual global data 
 ;this variable can be used in all 3 methods of calculating the simulated data
 
+
+;======================================================================
 ;the first method of calculating the IHR from the sim data is to use the complete data 
 ;and not consider the observed data
 
@@ -180,6 +182,9 @@ endfor
 
 ;calculate the annual IHR 
 annual_IHR = annualNorMean/annualSouMean
+
+;======================================================================
+;method 2 of calculating IHR of simulated data (copy from simGlobalDataAnalysis.pro
 
 
 end 
