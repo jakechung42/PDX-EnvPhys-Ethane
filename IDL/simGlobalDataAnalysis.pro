@@ -698,6 +698,31 @@ SceF_noaa = calSimGlobal(SceF_path, noaa, bin_bound, bin_mid)
 SceF_uci = calSimGlobal(SceF_path, uci, bin_bound, bin_mid)
 SceF_ogi = calSimGlobal(SceF_path, ogi, bin_bound, bin_mid)
 
+;export the simulated data of Scenario A for sensitivity study in simDataSensitivity.pro
+infile = "/home/excluded-from-backup/ethane/IDL/temp_file/SceA_SenStudy_allNetworks.dat"
+
+;prepare data for exporting 
+;give each data network an ID (1, 2, 3) so that when read can easily seperate the different network from 1 array
+one = fltarr(n_elements(SceA_ogi[0, *]))
+one[*] = 1
+one = rotate(one, 1) 
+outSceA_ogi = [one, SceA_ogi]
+
+two = fltarr(n_elements(SceA_uci[0, *]))
+two[*] = 2
+two = rotate(two, 1) 
+outSceA_uci = [two, SceA_uci]
+
+three = fltarr(n_elements(SceA_noaa[0, *]))
+three[*] = 3
+three = rotate(three, 1) 
+outSceA_noaa = [three, SceA_noaa]
+openw, lun1, infile, /get_lun
+printf, lun1, outSceA_ogi
+printf, lun1, outSceA_uci
+printf, lun1, outSceA_noaa
+
+free_lun, lun1
 
 ;plotting procedure
 ;set up plot
