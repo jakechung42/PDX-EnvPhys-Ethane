@@ -17,7 +17,6 @@ PRO simDataSensitivity
 
 compile_opt idl2
 
-
 ;specify the latitude bins
 ;restriction for the bin_bound array:
 ;	Southern Hemisphere must be negative
@@ -93,6 +92,8 @@ for i = 0, n_elements(bin_bound) - 1 do begin
 	bin_bound_idx[i] = IDX_lat
 endfor
 
+;CTM_INDEX doesn't account for IDL starting from 0so need to shift the bin_bound_idx by 1
+bin_bound_idx[*] = bin_bound_idx[*] - 1
 ;group the data into latitudinal bins as specified above in bin_bound variable
 ;the number of bin is determined by n_elements(bin_bound)-1
 ;all the different sites in the same latitudinal bin will be averaged to get an unified value
@@ -184,7 +185,109 @@ endfor
 annual_IHR = annualNorMean/annualSouMean
 
 ;======================================================================
-;method 2 of calculating IHR of simulated data (copy from simGlobalDataAnalysis.pro
+;method 2 of calculating IHR of simulated data 
+;import .dat file from the simgGlobalDataAnalysis program since it already had one of the IHR calculated
+infile = "/home/excluded-from-backup/ethane/IDL/temp_file/SceA_SenStudy_allNetworks.dat"
 
+;open file to read
+openr, lun, infile, /get_lun
+;initiate varibale to store the data
+masterVar = fltarr(5, file_lines(infile))
+;read file
+readf, lun, masterVar
+;release memory
+free_lun, lun
+
+;separate the different networks
+ogi_idx = where(masterVar[0, *] eq 1)
+ihr_ogi2 = masterVar[*, ogi_idx]
+
+uci_idx = where(masterVar[0, *] eq 2)
+ihr_uci2 = masterVar[*, uci_idx]
+
+noaa_idx = where(masterVar[0, *] eq 3)
+ihr_noaa2 = masterVar[*, noaa_idx]
+
+;======================================================================
+;method 3 of calculating the IHR of the simulated data
+;calculate the IHR using the coordinates of all the available sites
+;this method differs from the second one in the point that the simulated data 
+;are the observed data only have spatial relationship in term of coordiantes but
+;not temporal since the time period that a coordinate is available is disregarded.
+
+;import the coordinates of all sites from all networks
+infile = "/home/excluded-from-backup/ethane/IDL/temp_file/network_coordinates.dat"
+
+;read file
+openr, lun, infile, /get_lun
+allCoor = fltarr(2, file_lines(infile))
+readf, lun, allCoor
+;free up memory
+free_lun, lun
+;allCoor contains coordinate lat, lon for all sites from all 3 networks
+
+idx = sort(allCoor[0, *])
+allCoor = allCoor[*, idx]
+
+;need to remove duplicate coordinates
+;get unique latitudes
+lat_idx = uniq(allCoor[0, *])
+u_lat = allCoor[0, lat_idx]
+all_lat = []
+all_lon = []
+;re-build the allCoor matrix to remove duplicate values
+for i = 0, n_elements(u_lat)-1 do begin
+	;retrieve latitude individually
+	a = where(allCoor[0, *] eq u_lat[i])
+	temp = allCoor[*, a] 
+	;to get unique longitudes, need to sort it first
+	lon_idx = sort(temp[1, *])
+	temp = temp[*, lon_idx]
+	lon_idx = uniq(temp[1, *])
+	u_lon = temp[1, lon_idx]
+	for j = 0, n_elements(u_lon)-1 do begin
+		;stacking up the values
+		all_lat = [all_lat, u_lat[i]]
+		all_lon = [all_lon, u_lon[j]]
+	endfor
+endfor
+
+allCoor = [rotate(all_lat, 1), rotate(all_lon, 1)]
+
+;convert the coordinates to index values
+allCoor_idx = fltarr(2, n_elements(allCoor[0, *]))
+for i = 0, n_elements(allCoor[0, *])-1 do begin
+	CTM_INDEX, CTM_TYPE('GEOS1', RESOLUTION= 2), a, b, CENTER= [allCoor[0, i], allCoor[1, i]], /non_interactive
+	allCoor_idx[1, i] = a ;longitude
+	allCoor_idx[0, i] = b ;latitude
+endfor
+
+;shift allCoor_idx by 1 index because CTM_INDEX starts from 1
+allCoor_idx[*, *] = allCoor_idx[*, *] - 1
+;define some variables to build the ratio table
+t = [] ;time
+la = [] ;lat
+lo = [] ;lon
+r = [] ;ratio
+for i = 0, n_elements(allCoor_idx[0, *])-1 do begin
+	ratio = annualSimGlobal[*, allCoor_idx[1, i], allCoor_idx[0, i]] ;get the ratio from coordinate indecies 
+	for j = 0, n_elements(ratio)-1 do begin ;loop through ratio to fill in the data for lat, lon and time
+		t = [t, j + 1981]
+		la = [la, allCoor[0, i]]
+		lo = [lo, allCoor[1, i]]
+		r = [r, ratio[j]]
+	endfor
+endfor
+
+;annualRawSim3 contains a table that is Time, Lat, Lon, Ratio which is the simulated data
+;that is sampled at the coordinates from the obs data.
+annualRawSim3 = [rotate(t, 1), rotate(la, 1), rotate(lo, 1), rotate(r, 1)]
+
+idx = sort(annualRawSim3[0, *])
+annualRawSim3 = annualRawSim3[*, idx]
+
+for i = 0, n_elements(simYear)-1 do begin
+	
+endfor
 
 end 
