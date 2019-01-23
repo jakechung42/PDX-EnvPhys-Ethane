@@ -1,15 +1,52 @@
 FUNCTION sind, angle
 
 ;this function takes sine value in degrees
-
 angle_rad = angle*!PI/180
-
 out = sin(angle_rad)
-
 return, out
 
 end
 
+;======================================================================
+FUNCTION MakeLatBin, bin_bound, lat, year, ratio
+
+;a modified version of MakeLatBin subfunction from the program simGlobalDataAnalysis to run 
+;for the simulated data set. The difference is that the simulated data only has annual data 
+;so don't need the month vector.
+
+;this function takes in the above inputs, then run through an algorithm to bin the latitudes
+;as specicfied by the bin_bound input. Latitude bands that is not specified in the bin_bound 
+;array will be discarded.
+;band id will be set as the mid latitude of that lat band.
+;the longitudes data is irrelevant in this calculation. So we can ignore the longitudes.
+;we are going to make a new array and convert the latitudes to their appropriate bands
+
+bin_lat = []
+bin_year = []
+bin_ratio = []
+;algorithm to move the latitude into bins
+;n_elements(bin_bound)-2 because we don't need it to run to the end. It just how the algorithm works
+for i = 0, n_elements(bin_bound)-2 do begin
+	x = where(lat ge bin_bound[i] and lat lt bin_bound[i + 1], count)
+	if (count gt 0) then begin
+		temp0 = (bin_bound[i] + bin_bound[i + 1])/2 ;id the different bins
+		temp1 = fltarr(n_elements(x))
+		temp1[*] = temp0
+		bin_lat = [bin_lat, temp1]
+		bin_year = [bin_year,year[x]]
+		bin_ratio = [bin_ratio, ratio[x]]
+	endif
+endfor
+
+bin_out = fltarr(3, n_elements(bin_ratio))
+bin_out[0, *] = bin_lat
+bin_out[1, *] = bin_year
+bin_out[2, *] = bin_ratio
+
+return, bin_out
+end
+
+;======================================================================
 ;this program studies the sensitivity of the simulated data when sampled with different methods
 ;refer to issue #10 of the Github repo
 
@@ -25,7 +62,7 @@ bin_bound = [-50, -30, 0, 30, 50, 75]
 
 ;read in sim data first. 
 ;use default emission scenario
-ems_dir = "/home/excluded-from-backup/data/C2H6/trac_avg.spinup_GFED4_MAVG_1981_2015.198101010000"
+ems_dir = "/home/excluded-from-backup/data/C2H6/trac_avg.PSUSF_1981_2015.bpch"
 print, ems_dir
 
 ;extract the 3D array that contains the global mixing ratio
@@ -36,7 +73,7 @@ getmodelandgridinfo, datainfo[0], modelinfo, gridinfo
 ;nt is the number of data points in the simulation.
 nt = n_elements(datainfo)
 simArr = fltarr(nt, 144, 91)
-;sim_yymmdd stores the entire time information of the input simulation
+;sim_ymd stores the entire time information of the input simulation
 sim_ymd = tau2yymmdd(tau0, /GEOS1)
 ;this section call out the data blocks of the simulated data and store it in simArr
 ;simArr is a 3-D array with the following attributes:
@@ -92,7 +129,7 @@ for i = 0, n_elements(bin_bound) - 1 do begin
 	bin_bound_idx[i] = IDX_lat
 endfor
 
-;CTM_INDEX doesn't account for IDL starting from 0so need to shift the bin_bound_idx by 1
+;CTM_INDEX doesn't account for IDL starting from 0 so need to shift the bin_bound_idx by 1
 bin_bound_idx[*] = bin_bound_idx[*] - 1
 ;group the data into latitudinal bins as specified above in bin_bound variable
 ;the number of bin is determined by n_elements(bin_bound)-1
@@ -104,6 +141,12 @@ for i = 0, 33 do begin
 	endfor
 endfor
 ;annualBinArr contains the time series averaged of each bin
+	;bin ---->
+;time
+;	|
+;	|
+;	|
+;	V
       ; 271.783      356.959      729.085      1298.60      1495.73
       ; 266.137      346.695      733.309      1333.07      1492.77
       ; 270.524      361.553      734.369      1293.23      1474.48
@@ -187,7 +230,7 @@ annual_IHR = annualNorMean/annualSouMean
 ;======================================================================
 ;method 2 of calculating IHR of simulated data 
 ;import .dat file from the simgGlobalDataAnalysis program since it already had one of the IHR calculated
-infile = "/home/excluded-from-backup/ethane/IDL/temp_file/SceA_SenStudy_allNetworks.dat"
+infile = "/home/excluded-from-backup/ethane/IDL/temp_file/SceE_SenStudy_allNetworks.dat"
 
 ;open file to read
 openr, lun, infile, /get_lun
@@ -200,20 +243,20 @@ free_lun, lun
 
 ;separate the different networks
 ogi_idx = where(masterVar[0, *] eq 1)
-ihr_ogi2 = masterVar[*, ogi_idx]
+ogi2 = masterVar[*, ogi_idx]
 
 uci_idx = where(masterVar[0, *] eq 2)
-ihr_uci2 = masterVar[*, uci_idx]
+uci2 = masterVar[*, uci_idx]
 
 noaa_idx = where(masterVar[0, *] eq 3)
-ihr_noaa2 = masterVar[*, noaa_idx]
+noaa2 = masterVar[*, noaa_idx]
 
 ;======================================================================
 ;method 3 of calculating the IHR of the simulated data
 ;calculate the IHR using the coordinates of all the available sites
 ;this method differs from the second one in the point that the simulated data 
-;are the observed data only have spatial relationship in term of coordiantes but
-;not temporal since the time period that a coordinate is available is disregarded.
+;and the observed data only have spatial relationship but
+;not temporal, since the time period of a site is ignored.
 
 ;import the coordinates of all sites from all networks
 infile = "/home/excluded-from-backup/ethane/IDL/temp_file/network_coordinates.dat"
@@ -279,15 +322,135 @@ for i = 0, n_elements(allCoor_idx[0, *])-1 do begin
 	endfor
 endfor
 
-;annualRawSim3 contains a table that is Time, Lat, Lon, Ratio which is the simulated data
-;that is sampled at the coordinates from the obs data.
+;annualRawSim3 contains a table that has the following headers
+;Time, Lat, Lon, Ratio which is from the simulated data
+;sampled at the coordinates from the obs data.
 annualRawSim3 = [rotate(t, 1), rotate(la, 1), rotate(lo, 1), rotate(r, 1)]
 
 idx = sort(annualRawSim3[0, *])
 annualRawSim3 = annualRawSim3[*, idx]
 
-for i = 0, n_elements(simYear)-1 do begin
-	
+;separate the simulated data into bins based on latitudes 
+annualBinSim3 = MakeLatBin(bin_bound, annualRawSim3[1, *], annualRawSim3[0, *], annualRawSim3[3, *])
+
+;obtain the bin id, which is the mid latitude of bin_bound
+temp0 = annualBinSim3[0, sort(annualBinSim3[0, *])]
+mid_bin_bound = annualBinSim3[0, uniq(temp0)]
+
+;prep variables
+lat_id = []
+year1 = []
+ratio1 = []
+
+;calculate the annual bin average
+for i = 0, n_elements(mid_bin_bound)-1 do begin ;loop through each bin 
+	y = where(annualBinSim3[0, *] eq mid_bin_bound[i], count);pull the the segment of the data with the appropriate bin
+	if count eq 0 then begin ;checkpoit
+		print, 'There must be at elast one annualBinSim3 eq to the bin id or else there is problem'
+		stop
+	endif
+	temp0 = annualBinSim3[*, y] 
+	for j = 0, n_elements(simYear)-1 do begin;loop through each year to calculate the mean of each year
+		x = where(temp0[1, *] eq simYear[j])
+		;rebuild the array
+		lat_id = [lat_id, mid_bin_bound[i]]
+		year1 = [year1, simYear[j]]
+		ratio1 = [ratio1, mean(temp0[2, x])]
+	endfor
 endfor
 
-end 
+annualAllBin = [rotate(lat_id, 1), rotate(year1, 1), rotate(ratio1, 1)]
+
+;applying weights to the ratio
+for i = 0, n_elements(annualAllBin[0, *])-1 do begin
+	loc = where(annualAllBin[0, i] eq mid_bin_bound)
+	if (annualAllBin[0, i] gt 0) then begin
+		weight = abs((sind(bin_bound[loc+1]) - sind(bin_bound[loc]))/sind(bin_bound[n_elements(bin_bound)-1]))
+		annualAllBin[2, i] = annualAllBin[2, i]*weight
+	endif else begin
+		weight = abs((sind(bin_bound[loc+1]) - sind(bin_bound[loc]))/sind(bin_bound[0]))
+		annualAllBin[2, i] = annualAllBin[2, i]*weight
+	endelse
+endfor
+
+;calculating hemispheric means
+sou3_idx = where(annualAllBin[0, *] lt 0)
+sou3 = annualAllBin[*, sou3_idx]
+nor3_idx = where(annualAllBin[0, *] gt 0)
+nor3 = annualAllBin[*, nor3_idx]
+
+annualNor3 = fltarr(2, n_elements(simYear))
+for i = 0, n_elements(simYear)-1 do begin
+	x = where(nor3[1, *] eq simYear[i])
+	annualNor3[0, i] = simYear[i]
+	annualNor3[1, i] = total(nor3[2, x])
+endfor
+
+annualSou3 = fltarr(2, n_elements(simYear))
+for i = 0, n_elements(simYear)-1 do begin
+	x = where(sou3[1, *] eq simYear[i])
+	annualSou3[0, i] = simYear[i]
+	annualSou3[1, i] = total(sou3[2, x])
+endfor
+
+
+annual_IHR_3 = annualNor3[1, *]/ annualSou3[1, *]
+
+
+;plotting procedure
+;set up plot
+open_device, /ps, /color, file='temp.eps', margin=0.05, xsize = 10.0, ysize = 7.5
+!x.thick=1
+!y.thick=1
+!p.font=1
+!p.thick =0.5
+
+multiplot, /default    ; resets multiplot settings
+multiplot, [1,3], ygap=0.002, xgap=0;  sets up multiplot 
+
+;plot northern hemisphere of all 3 methods
+cgPlot, simYear, annualNorMean, xrange = [1980, 2015], xticklen = 1, xgridstyle = 1, $
+	xticks = 17, /nodata, ytitle = 'Mixing ratio (pptv)', $
+	title = 'Sensitivity study of the simulated IHR', yrange = [600, 1200]
+cgPlot, simYear, annualNorMean, /overplot, color = 'red'
+cgPlot, simYear, annualNor3[1, *], /overplot, color = 'blue'
+cgPlot, ogi2[1, *], ogi2[2, *], psym = 4, color = 'black', /overplot
+cgPlot, uci2[1, *], uci2[2, *], psym = 2, color = 'black', /overplot
+cgPlot, noaa2[1, *], noaa2[2, *], psym = 5, color = 'black', /overplot
+
+multiplot, /doyaxis, /doxaxis
+
+;plot southern hemisphere of all 3 methods
+cgPlot, simYear, annualSouMean, xrange = [1980, 2015], xticklen = 1, xgridstyle = 1, $
+	xticks = 17, /nodata, ytitle = 'Mixing ratio (pptv)', XTickformat='(A1)', $
+	yrange = [200, 400]
+cgPlot, simYear, annualSouMean, /overplot, color = 'red'
+cgPlot, simYear, annualSou3[1, *], /overplot, color = 'blue'
+cgPlot, ogi2[1, *], ogi2[3, *], psym = 4, color = 'black', /overplot
+cgPlot, uci2[1, *], uci2[3, *], psym = 2, color = 'black', /overplot
+cgPlot, noaa2[1, *], noaa2[3, *], psym = 5, color = 'black', /overplot
+
+multiplot, /doyaxis, /doxaxis
+
+;plot IHR of all 3 methods
+cgPlot, simYear, annual_IHR, xrange = [1980, 2015], xticklen = 1, xgridstyle = 1, $
+	xticks = 17, /nodata, ytitle = 'IHR', yrange = [2, 4]
+cgPlot, simYear, annual_IHR, /overplot, color = 'red'
+cgPlot, simYear, annual_IHR_3, /overplot, color = 'blue'
+cgPlot, ogi2[1, *], ogi2[4, *], psym = 4, color = 'black', /overplot
+cgPlot, uci2[1, *], uci2[4, *], psym = 2, color = 'black', /overplot
+cgPlot, noaa2[1, *], noaa2[4, *], psym = 5, color = 'black', /overplot
+
+cgLegend, title = ['All Global Data', 'All coordinates, ignore the temporal data'], $
+	psym = [3, 3], linestyle = [0, 0], $
+	color = ['red', 'blue'], $
+	location = [1984, 2.5], charsize = 1, /data, vspace = 1
+	
+close_device
+
+spawn, 'gv temp.eps'
+
+multiplot, /default
+
+
+end
