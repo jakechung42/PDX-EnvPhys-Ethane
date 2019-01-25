@@ -50,7 +50,11 @@ return, out
 end
 
 ;======================================================================
-PRO comprSimIHRCalc, method1 = method1, method2 = method2, method3 = method3
+PRO comprSimIHRCalc, $
+	method1 = method1, $
+	method2 = method2, $
+	method3 = method3, $
+	normalize_plot = normalize_plot
 
 ;different plots will be plotted depending on the input method argument
 ;this program imports the IHR data from all 6 scenarios calculated using different methods
@@ -130,7 +134,7 @@ sceC2 = sep_network(sceC2)
 sceD2 = sep_network(sceD2)
 sceE2 = sep_network(sceE2)
 sceF2 = sep_network(sceF2)
-
+if KEYWORD_SET(normalize_data) then begin
 case 1 of
 	KEYWORD_SET(method1): begin
 		;set up plot
