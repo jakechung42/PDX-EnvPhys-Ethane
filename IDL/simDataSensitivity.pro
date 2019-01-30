@@ -62,7 +62,7 @@ bin_bound = [-50, -30, 0, 30, 50, 75]
 
 ;read in sim data first. 
 ;use default emission scenario
-ems_dir = "/home/excluded-from-backup/data/C2H6/trac_avg.PSUSF_1981_2015.bpch"
+ems_dir = "/home/excluded-from-backup/data/C2H6/trac_avg.PSU_MER3BB_MER18FF_1981_2015.bpch"
 print, ems_dir
 
 ;extract the 3D array that contains the global mixing ratio
@@ -396,7 +396,33 @@ endfor
 
 annual_IHR_3 = annualNor3[1, *]/ annualSou3[1, *]
 
+;export the simulated IHR to plot a compare graph in the program comprSimIHRCalc.pro
+;prepare the data to export
+;method 1 IHR
+out_IHR1 = [rotate(simYear, 1), rotate(annualNorMean, 1), rotate(annualSouMean, 1), rotate(annual_IHR, 1)]
+temp0 = fltarr(n_elements(out_IHR1[0, *]))
+temp0[*] = 1
+out_IHR1 = [rotate(temp0, 1), out_IHR1]
+;method 3 IHR
+out_IHR3 = [rotate(simYear, 1), annualNor3[1, *], annualSou3[1, *], annual_IHR_3]
+temp0 = fltarr(n_elements(out_IHR3[0, *]))
+temp0[*] = 3
+out_IHR3 = [rotate(temp0, 1), out_IHR3]
 
+;output file
+;infile = "/home/excluded-from-backup/ethane/IDL/temp_file/SceE_IHR_Method_1_3.dat"
+;infile = "/home/excluded-from-backup/ethane/IDL/temp_file/SceA_IHR_Method_1_3.dat"
+;infile = "/home/excluded-from-backup/ethane/IDL/temp_file/SceB_IHR_Method_1_3.dat"
+;infile = "/home/excluded-from-backup/ethane/IDL/temp_file/SceC_IHR_Method_1_3.dat"
+;infile = "/home/excluded-from-backup/ethane/IDL/temp_file/SceD_IHR_Method_1_3.dat"
+infile = "/home/excluded-from-backup/ethane/IDL/temp_file/SceF_IHR_Method_1_3.dat"
+
+openw, lun, infile, /get_lun
+printf, lun, out_IHR1
+printf, lun, out_IHR3
+
+free_lun, lun
+ 
 ;plotting procedure
 ;set up plot
 open_device, /ps, /color, file='temp.eps', margin=0.05, xsize = 10.0, ysize = 7.5
