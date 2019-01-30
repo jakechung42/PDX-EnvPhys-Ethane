@@ -53,8 +53,7 @@ end
 PRO comprSimIHRCalc, $
 	method1 = method1, $
 	method2 = method2, $
-	method3 = method3, $
-	normalize_plot = normalize_plot
+	method3 = method3
 
 ;different plots will be plotted depending on the input method argument
 ;this program imports the IHR data from all 6 scenarios calculated using different methods
