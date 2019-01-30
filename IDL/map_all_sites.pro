@@ -120,9 +120,7 @@ endfor
 
 
 free_lun, lun
-;specify coordinates of the OGI sites
-lat_ogi = [71.16, 45.5, -14.1, 21.08, -42, -90]
-lon_ogi = [-156.5, -124, -170.6, -157.1, 145, 0]
+
 
 ;plotting procedure:
 ;there are 2 plotting functions:

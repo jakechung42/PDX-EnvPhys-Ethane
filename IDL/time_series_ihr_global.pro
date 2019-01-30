@@ -632,7 +632,6 @@ sou_ogi = getSouth(annual_ogi)
 nor_ogi = getNorth(annual_ogi) 
 
 ;calculate the northern hemispheric mean with weights and everything
-
 annual_sou_noaa = weightedMean(bin_mid, bin_bound, sou_noaa)
 annual_nor_noaa = weightedMean(bin_mid, bin_bound, nor_noaa)
 
