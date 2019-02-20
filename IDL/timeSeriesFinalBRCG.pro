@@ -74,10 +74,12 @@ end
 ;======================================================================
 FUNCTION annual_mean, ratio_vec, month_vec
 
-;this function calculates the annual mean of the data
+;this function calculates the annual mean of the data by first calculating the
+;mnea of the average of each month to ensure that the data is not biased by the months with more 
+;data
 ;despite the fact that the name of this function is annual mean, it only
 ;calculate the mean of one year when the function is called. So to actually
-;calculate monthly means, this function would have to be looped through all the years
+;calculate annual means, this function would have to be looped through all the years
 
 ;if there's not enough data for a year, the function will return NaN
 EnoughData = 1
