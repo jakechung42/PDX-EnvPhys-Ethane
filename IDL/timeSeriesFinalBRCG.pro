@@ -102,7 +102,7 @@ if n_elements(hasMonth) eq 4 then begin
 endif else EnoughData = 0
 
 ;calculate the annual mean and annual standard error
-if EnoughData eq 1 then begin ;only proceed if have data in 3 6 9 and 12
+if EnoughData eq 1 then begin ;only proceed if have data in months 3 6 9 and 12
 	month_avg = fltarr(4) ;create array to store monthly averages of a year
 	month_err = fltarr(4) ;create array to store monthly error of a year
 	for i = 0, 3 do begin
