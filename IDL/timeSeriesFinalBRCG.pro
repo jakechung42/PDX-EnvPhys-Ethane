@@ -272,7 +272,7 @@ return, out
 
 end
 ;>>>>>>>>>>[main program]<<<<<<<<<<
-PRO timeSeriesFinalBRCG
+PRO timeSeriesFinalBRCG, normalized=normalized
 
 compile_opt idl2
 
@@ -577,6 +577,8 @@ for i = 0, n_elements(ogiYear)-1 do begin
 	endelse
 endfor
 
+;check normalized keyword to plot normalized plot
+if KEYWORD_SET(normalized) then begin
 ;since we don't care much about the absolute value of ethane ratio but more about the trend, the following section
 ;takes the average of the data and subtract it from each data point to compare the trend of the observed
 ;and simulated data.
@@ -598,7 +600,9 @@ ogiCG_mean[0, *] = ogiCG_mean[0, *] - allCG_mean
 noaaIHR = noaaIHR - all_IHR_mean
 uciIHR = uciIHR - all_IHR_mean
 ogiIHR = ogiIHR - all_IHR_mean
-print, noaaBR_mean
+
+endif
+
 ;>>>>>>>>>>>[Process Simulated data]<<<<<<<<<<
 ;sim_title = 'PSU emissions scaled to Xiao et al over 1996-2003' Sce E
 filename1 = "/home/excluded-from-backup/data/C2H6/trac_avg.PSUSF_1981_2015.bpch"
@@ -661,6 +665,9 @@ sim3ihr = barrow3/capegrim3
 sim4ihr = barrow4/capegrim4
 sim5ihr = barrow5/capegrim5
 sim6ihr = barrow6/capegrim6
+
+;check normalized keyword
+if KEYWORD_SET(normalized) then begin
 ;remove absolute values and just show the trend
 barrow1 = rmAbsSim(barrow1)
 barrow2 = rmAbsSim(barrow2)
@@ -682,7 +689,26 @@ sim3ihr = rmAbsSim(sim3ihr)
 sim4ihr = rmAbsSim(sim4ihr)
 sim5ihr = rmAbsSim(sim5ihr)
 sim6ihr = rmAbsSim(sim6ihr)
+
+endif
 ;>>>>>>>>>>>[Plotting Procedure]<<<<<<<<<<
+
+;set up the yaxis of the plots depends on whether normalized option is used
+if KEYWORD_SET(normalized) then begin
+	NH_hi = 700
+	NH_lo = -300
+	SH_hi = 100
+	SH_lo = -100
+	IHR_hi = 3
+	IHR_lo = -3
+endif else begin
+	NH_hi = 2000
+	NH_lo = 1200
+	SH_hi = 500
+	SH_lo = 150
+	IHR_hi = 10
+	IHR_lo = 2
+endelse
 ;set up plot
 open_device, /ps, /color, file='temp.eps', margin=0.05, xsize = 10.0, ysize = 7.5
 !x.thick=1
@@ -694,7 +720,7 @@ multiplot, [1,3], ygap=0.002, xgap=0;  sets up multiplot
 
 ;plot barrow
 cgPlot, noaaBR_year, xrange = [1982, 2015], xticklen = 1, xgridstyle = 1, $
-	xticks = 17, /nodata, yrange = [-300,700], ytitle = 'Mixing ratio(pptv)', $
+	xticks = 17, /nodata, yrange = [NH_lo,NH_hi], ytitle = 'Mixing ratio(pptv)', $
 	title = 'Time series of Barrow and Cape Grim along with IHR (Mar, Jun, Sep, Dec). UCI pulls data from lat 38 to 46 south'
 cgPlot, noaaBR_year, noaaBR_mean[0, *], /overplot, err_yhigh = noaaBR_mean[1, *], err_ylow = noaaBR_mean[1, *], $
 	psym = 5, color = 'black'
@@ -714,7 +740,7 @@ multiplot, /doyaxis, /doxaxis
 
 ;plot Cape Grim 
 cgPlot, noaaCG_year, /nodata, xrange = [1982, 2015], xticklen = 1, xgridstyle = 1, $
-	xticks = 17, XTickformat='(A1)', yrange = [-100,100], ytitle = 'Mixing ratio(pptv)'
+	xticks = 17, XTickformat='(A1)', yrange = [SH_lo,SH_hi], ytitle = 'Mixing ratio(pptv)'
 cgPlot, noaaCG_year, noaaCG_mean[0, *], /overplot, err_yhigh = noaaCG_mean[1, *], err_ylow = noaaCG_mean[1, *], $
 	psym = 5, color = 'black'
 cgPlot, uciCG_year, uciCG_mean[0, *], /overplot, err_yhigh = uciCG_mean[1, *], err_ylow = uciCG_mean[1, *], $
@@ -733,7 +759,7 @@ multiplot, /doyaxis, /doxaxis
 
 ;plot IHR 
 cgPlot, noaaYear, /nodata, xtitle = 'Years', ytitle = 'IHR', $
-	xrange = [1982, 2015], yrange = [-3, 3], $
+	xrange = [1982, 2015], yrange = [IHR_lo, IHR_hi], $
 	xticklen = 1, xgridstyle = 1, xticks = 17
 cgPlot, noaaYear, noaaIHR, /overplot, psym = 5, color = 'black', err_yhigh = noaaIHR_err, $
 	err_ylow = noaaIHR_err
@@ -752,8 +778,8 @@ cgPlot, simYear, sim6ihr, /overplot, linestyle = 0, color = 'red', thick = 1
 
 AL_Legend, ['Sce A', 'Sce B', 'Sce C', 'Sce D', 'Sce E', 'Sce F'], $
 	psym = [0, 0, 0, 0, 0, 0], linestyle = [0, 0, 2, 0, 2, 0], box = 0, $
-	position = [1992, 3], color = ['violet', 'forest green', 'steelblue', 'steelblue', 'red', 'red'], $
-	charsize = 1
+	position = [1992, 10], color = ['violet', 'forest green', 'steelblue', 'steelblue', 'red', 'red'], $
+	charsize = 0.8
 close_device
 
 spawn, 'gv temp.eps'
