@@ -217,7 +217,7 @@ cg_ogi = { month: ogi.month[cg_ogi_idx], $
 ;this algorithm will treat all the data between latitude -40 and -44 as 1 site
 ;ignoring longitude
 ;change the up_bound and low_bound values to change the latitude band boundaries.
-up_bound1 = -38
+up_bound1 = -34
 low_bound1 = -46
 cg_band1_uci_idx = where(uci.lat ge low_bound1 and uci.lat le up_bound1)
 cg_band1_uci = fltarr(4, n_elements(cg_band1_uci_idx))
@@ -344,8 +344,8 @@ endif
 ;and plot it with the data to compare its sensitivity to latitudes.
 
 ;pulling the new lat band 
-low_bound2 = -46
-up_bound2 = -38
+low_bound2 = -44
+up_bound2 = -36
 
 cg_band2_uci_idx = where(uci.lat ge low_bound2 and uci.lat le up_bound2)
 cg_band2_uci = fltarr(4, n_elements(cg_band2_uci_idx))
@@ -592,6 +592,11 @@ printf, lun, '>>>>>END UCI BAND 2 REPORT<<<<<'
 
 free_lun, lun
 
+;convert the latitudinal boundaries to string to use in legend of the plot
+uci_label1 = 'UCI' + string(abs(low_bound1)) + 'to' + string(abs(up_bound1))
+uci_label2 = 'UCI' + string(abs(low_bound2)) + 'to' + string(abs(up_bound2))
+
+
 ; plotting procedure
 open_device, /ps, /color, file='temp.eps', margin=0.05, xsize = 10.0, ysize = 7.5
 !x.thick=1
@@ -620,7 +625,7 @@ cgPlot, year_uci2, avg_uci2, /overplot, color = 'violet', $
 
 cgLegend, SymColors = ['forest green', 'tomato', 'violet', 'steelblue'], $
 	PSyms = [4, 2, 2, 5], Symsize = 1.5, Location = [0.7, 0.85], $
-	titles = ['NOAA', 'UCI 44 to 40', 'UCI 46 to 38', 'OGI'], $
+	titles = ['NOAA', uci_label1, uci_label2, 'OGI'], $
 	/Box, /Background, BG_Color = 'rose', /center_sym, length = 0
 close_device
 
