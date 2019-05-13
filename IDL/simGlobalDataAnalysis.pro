@@ -996,6 +996,28 @@ spawn, 'gv temp.eps'
 
 multiplot, /default
 
+;export IHR data to compare with IHR data from method 2
+temp_ihr_noaa = normData(annual_ihr_noaa)
+temp_ihr_uci = normData(annual_ihr_uci)
+temp_ihr_ogi = normData(annual_ihr_ogi)
+
+infile = '/home/excluded-from-backup/ethane/IDL/temp_file/method1_IHR.dat'
+openw, lun, infile, /get_lun
+
+for i = 0, n_elements(temp_ihr_noaa)-1 do begin
+	printf, lun, '1', annual_sou_noaa[0, i], temp_ihr_noaa[i], annual_ihr_noaa_err[i]
+endfor
+
+for i = 0, n_elements(temp_ihr_uci)-1 do begin
+	printf, lun, '2', annual_sou_uci[0, i], temp_ihr_uci[i], annual_ihr_uci_err[i]
+endfor
+
+for i = 0, n_elements(temp_ihr_ogi)-1 do begin
+	printf, lun, '3', annual_sou_ogi[0, i], temp_ihr_ogi[i], annual_ihr_ogi_err[i]
+endfor
+
+free_lun, lun
+
 ;otherwise, no normalization
 endif else begin
 
