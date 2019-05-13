@@ -786,5 +786,22 @@ spawn, 'gv temp.eps'
 
 multiplot, /default
 
+;write the observational IHR externally so that IHR_M1_M2 can use to compare IHR from method 1 and method 2
+infile = '/home/excluded-from-backup/ethane/IDL/temp_file/method2_IHR.dat'
+openw, lun, infile, /get_lun
+
+for i = 0, n_elements(noaaIHR)-1 do begin
+	printf, lun, '1', noaaYear[i], noaaIHR[i], noaaIHR_err[i]
+endfor
+
+for i = 0, n_elements(uciIHR)-1 do begin
+	printf, lun, '2', uciYear[i], uciIHR[i], uciIHR_err[i]
+endfor
+
+for i = 0, n_elements(ogiIHR)-1 do begin
+	printf, lun, '3', ogiYear[i], ogiIHR[i], ogiIHR_err[i]
+endfor
+
+free_lun, lun
 
 end
